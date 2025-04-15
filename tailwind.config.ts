@@ -1,6 +1,18 @@
 import type { Config } from "tailwindcss";
 
-const config: Config = {
+type DaisyUIConfig = Config & {
+  daisyui: {
+    themes?: any[];
+    darkTheme?: string;
+    base?: boolean;
+    styled?: boolean;
+    utils?: boolean;
+    prefix?: string;
+    logs?: boolean;
+  };
+};
+
+const config: DaisyUIConfig = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,6 +21,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      boxShadow: {
+        'custom-soft': '0 0 14px 0 rgba(108, 103, 97, 0.06)',
+      },
       colors: {
         // Base theme colors
         primary: {
@@ -121,8 +136,36 @@ const config: Config = {
       },
     },
   },
+  plugins: [require("daisyui")],
+  daisyui: {
+    themes: [
+      {
+        light: {
+          ...require("daisyui/src/theming/themes")["light"],
+          primary: "var(--primary-500)",
+          secondary: "var(--secondary-500)",
+          accent: "var(--accent-500)",
+          neutral: "var(--secondary-200)",
+          "base-100": "var(--background)",
+        },
+        dark: {
+          ...require("daisyui/src/theming/themes")["dark"],
+          primary: "var(--primary-500)",
+          secondary: "var(--secondary-500)",
+          accent: "var(--accent-500)",
+          neutral: "var(--secondary-800)",
+          "base-100": "var(--background)",
+        },
+      },
+    ],
+    darkTheme: "dark",
+    base: true,
+    styled: true,
+    utils: true,
+    prefix: "",
+    logs: false,
+  },
   darkMode: 'class',
-  plugins: [],
 };
 
 export default config; 

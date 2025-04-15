@@ -15,7 +15,6 @@ export type ThemeColors = {
     muted: string;
     mutedForeground: string;
     border: string;
-    text: string;
   };
 };
 
@@ -24,8 +23,8 @@ export const themes: Record<string, ThemeColors> = {
     name: "Default Light",
     colors: {
       primary: {
-        "50": "#eff6ff",
-        "100": "#dbeafe",
+        "black": "#090B0B",
+        "gray": "#5D5D5D",
         "200": "#bfdbfe",
         "300": "#93c5fd",
         "400": "#60a5fa",
@@ -120,8 +119,7 @@ export const themes: Record<string, ThemeColors> = {
       cardForeground: "#0f172a",
       muted: "#f1f5f9",
       mutedForeground: "#64748b",
-      border: "#e2e8f0",
-      text: "#090B0B",
+      border: "#E1D9D0",
     },
   },
 }; 

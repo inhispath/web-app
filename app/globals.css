@@ -1,6 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@plugin "daisyui" {
+  themes: light --default, light --prefersdark;
+};
+
 
 @layer base {
   :root {
