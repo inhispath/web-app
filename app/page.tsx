@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, MouseEvent as ReactMouseEvent } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, SeparatorVertical } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import React from "react";
 
@@ -30,6 +30,9 @@ export default function Home() {
   const [displayMode, setDisplayMode] = useState<1 | 2 | 3>(1);
   const [prevDisplayMode, setPrevDisplayMode] = useState<1 | 2 | 3>(1);
   const [rightSectionWidth, setRightSectionWidth] = useState(200);
+  const [dragging, setDragging] = useState<true | false>(false);
+  const [prevChapter, setPrevChapter] = useState<number | null>(null);
+  const [prevBookId, setPrevBookId] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchTranslationsAndBooks() {
@@ -130,9 +133,13 @@ export default function Home() {
   };
 
   const handleChapterClick = async (bookId: number, chapter: number) => {
+    setPrevChapter(selectedChapter);
+    setPrevBookId(selectedBookId);
+    
+    setSelectedChapter(chapter);
+    setSelectedBookId(bookId);
+    
     try {
-      setSelectedChapter(chapter);
-      setSelectedBookId(bookId);
       const res = await fetch(
         `http://localhost:8000/translations/${selectedTranslationShort}/books/${bookId}/chapters/${chapter}/verses`
       );
@@ -156,12 +163,13 @@ export default function Home() {
     startX = e.clientX;
     const leftSection = document.getElementById("left-section");
     if (!leftSection) return;
-    startWidth = leftSection.offsetWidth;
+    startWidth = leftSection.offsetWidth - 32;
     document.addEventListener("mousemove", onDrag);
     document.addEventListener("mouseup", stopDrag);
   };
 
   const startRightDrag = (e: ReactMouseEvent<HTMLDivElement>) => {
+    setDragging(true);
     startRightX = e.clientX;
     const centerSection = document.getElementById("center-section");
     if (!centerSection) return;
@@ -201,6 +209,7 @@ export default function Home() {
   };
 
   const stopRightDrag = () => {
+    setDragging(false);
     document.removeEventListener("mousemove", onRightDrag);
     document.removeEventListener("mouseup", stopRightDrag);
   };
@@ -235,15 +244,26 @@ export default function Home() {
     setDisplayMode(newMode);
   };
 
-  // Define animation variants for display mode transitions
+  // Enhanced animation variants to handle both display mode and chapter changes
   const contentAnimationVariants = {
     // Initial state (entering)
-    initial: (custom: { from: number; to: number }) => {
-      // Only animate when transitioning between modes 1 and 3
-      if ((custom.from === 1 && custom.to === 3) || (custom.from === 3 && custom.to === 1)) {
+    initial: (custom: { 
+      fromMode?: number; 
+      toMode?: number;
+      isChapterChange?: boolean;
+    }) => {
+      // Check if this is a chapter change
+      if (custom.isChapterChange) {
         return { opacity: 0, y: 8 };
       }
-      // No animation for transitions involving mode 2
+      
+      // For display mode transitions between 1 and 3
+      if ((custom.fromMode === 1 && custom.toMode === 3) || 
+          (custom.fromMode === 3 && custom.toMode === 1)) {
+        return { opacity: 0, y: 8 };
+      }
+      
+      // No animation for other mode transitions
       return { opacity: 1, y: 0 };
     },
     // Animate state (visible)
@@ -253,16 +273,31 @@ export default function Home() {
       transition: { duration: 0.3, ease: "easeOut" }
     },
     // Exit state (leaving)
-    exit: (custom: { from: number; to: number }) => {
-      // Only animate when transitioning between modes 1 and 3
-      if ((custom.from === 1 && custom.to === 3) || (custom.from === 3 && custom.to === 1)) {
+    exit: (custom: { 
+      fromMode?: number; 
+      toMode?: number;
+      isChapterChange?: boolean;
+    }) => {
+      // Check if this is a chapter change
+      if (custom.isChapterChange) {
         return { 
           opacity: 0, 
           y: -8,
           transition: { duration: 0.2, ease: "easeIn" }
         };
       }
-      // No animation for transitions involving mode 2
+      
+      // For display mode transitions between 1 and 3
+      if ((custom.fromMode === 1 && custom.toMode === 3) || 
+          (custom.fromMode === 3 && custom.toMode === 1)) {
+        return { 
+          opacity: 0, 
+          y: -8,
+          transition: { duration: 0.2, ease: "easeIn" }
+        };
+      }
+      
+      // No animation for other mode transitions
       return { 
         opacity: 1, 
         y: 0,
@@ -324,11 +359,11 @@ export default function Home() {
 
       <div className="container mx-auto px-4 mr-[10px] flex h-full text-[var(--primary-black)]">
         <div id="left-section" className="w-1/3 p-[16px] overflow-auto flex justify-end">
-          <div className="space-y-2 text-[26px] font-primary">
+          <div className="space-y-2 text-[26px] font-primary mt-[20px]">
             {books.map((book) => (
               <div key={book.name}>
                 <div
-                  className="cursor-pointer flex items-center gap-[6px] mb-[8px] hover:text-primary-600 transition-colors duration-200"
+                  className="cursor-pointer flex items-center gap-[6px] mb-[16px] hover:text-primary-600 transition-colors duration-200"
                   onClick={() => toggleBook(book.name)}
                 >
                   {book.name}
@@ -387,7 +422,9 @@ export default function Home() {
           onMouseDown={startDrag}
         >
           <div className="w-[1px] cursor-col-resize bg-[var(--border)] min-h-[calc(100vh-60px)]" />
-          <div className="shadow-[0_0_14px_0_rgba(108,103,97,0.06)] absolute mt-[24px] -translate-y-1/2 w-[24px] h-[24px] rounded-full bg-[var(--foreground)] border-[1px] border-[var(--border)]" />
+          <div className="shadow-[0_0_14px_0_rgba(108,103,97,0.06)] flex justify-center items-center absolute mt-[24px] -translate-y-1/2 w-[24px] h-[24px] rounded-full bg-[var(--foreground)] border-[1px] border-[var(--border)]">
+              <SeparatorVertical size={16} color="#E1D9D0" />
+          </div>
         </div>
 
 
@@ -452,11 +489,22 @@ export default function Home() {
 
 
 
-          <AnimatePresence mode="wait" custom={{ from: prevDisplayMode, to: displayMode }}>
+          <AnimatePresence 
+            mode="wait" 
+            custom={{ 
+              fromMode: prevDisplayMode, 
+              toMode: displayMode,
+              isChapterChange: prevChapter !== selectedChapter || prevBookId !== selectedBookId
+            }}
+          >
             {verses.length > 0 ? (
               <motion.div
                 key={`chapter-${selectedBookId}-${selectedChapter}-${displayMode}`}
-                custom={{ from: prevDisplayMode, to: displayMode }}
+                custom={{ 
+                  fromMode: prevDisplayMode, 
+                  toMode: displayMode,
+                  isChapterChange: prevChapter !== selectedChapter || prevBookId !== selectedBookId
+                }}
                 variants={contentAnimationVariants}
                 initial="initial"
                 animate="animate"
@@ -472,7 +520,7 @@ export default function Home() {
                 ) : displayMode === 2 ? (
                   <div className="flex flex-wrap gap-x-2 text-justify">
                     {verses.map((verse) => (
-                      <>
+                      <React.Fragment key={verse.verse}>
                         <strong className="mr-1">{verse.verse}{'\u00A0'}</strong>
                         {verse.text.trim().split(" ").map((word, index) => (
                           <span key={`${verse.verse}-${index}`} className="inline-block">
@@ -480,7 +528,7 @@ export default function Home() {
                             {'\u00A0'}
                           </span>
                         ))}
-                      </>
+                      </React.Fragment>
                     ))}
                   </div>
                 ) : (
@@ -543,7 +591,9 @@ export default function Home() {
             onMouseDown={startRightDrag}
           >
             <div className="w-[1px] cursor-col-resize bg-[var(--border)] min-h-[calc(100vh-60px)]" />
-            <div className="shadow-[0_0_14px_0_rgba(108,103,97,0.06)] absolute mt-[24px] -translate-y-1/2 w-[24px] h-[24px] rounded-full bg-[var(--foreground)] border-[1px] border-[var(--border)]" />
+            <div className="shadow-[0_0_14px_0_rgba(108,103,97,0.06)] flex justify-center items-center absolute mt-[24px] -translate-y-1/2 w-[24px] h-[24px] rounded-full bg-[var(--foreground)] border-[1px] border-[var(--border)]">
+              <SeparatorVertical size={16} color="#E1D9D0" />
+            </div>
           </div>
         )}
 
@@ -553,12 +603,11 @@ export default function Home() {
           <motion.div
             id="right-spacer"
             initial={{ width: 0 }}
-            animate={{ width: "33%" }}
-            transition={{
-              duration: 0.3,  // Duration of the animation
-              ease: "easeInOut"  // Ease in-out effect
-            }}
+            animate={{ width: rightSectionWidth }}
+            transition={{ duration: dragging ? 0 : 0.4, ease: "easeInOut" }}
+            style={{ width: rightSectionWidth }} // allow dragging to update
           />
+        
         )}
 
 
