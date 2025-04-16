@@ -1,7 +1,6 @@
 # Progress as of 16/04/2025
 
-
-https://cdn-cf-east.streamable.com/video/mp4/xbrdxc.mp4?Expires=1745074439195&Key-Pair-Id=APKAIEYUVEN4EVB2OKEQ&Signature=kl2fE6Ic0RUl1mYp8h0ZosoBxD49yMN-376nmh7ZGB9v8Jh1ZmHD120rTlYDDpwltJOYN5lClPNyKFTd97ahwgOSnDMiS1VOAILraWUOu~cLLRhwUxKKtBOoXlb6xrZQHUXZzlzvtSg5ezNOZgMvhVcqitLLxzlaqsFZTb2-B7s35fTNDa1QaFdaG-ToaFrcCKf7AdWw3x52AgkuyLKHhFqQFk7WV6kwhr4eGJgUWT~5Gk6Q-2uU8sAfoQTLoHVrAvvzzDERNdI9Bt5baJevRcthre-75jFZQmUGHgzs8QyzxCv3AQqufM5FPDMSgBeCs7JqaE48elHCc0UxDfZQRg__
+https://streamable.com/xbrdxc (mp4 file is larger than 10mb)
 
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
