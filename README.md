@@ -1,9 +1,8 @@
-# Progress as of 15/04/2025
+# Progress as of 16/04/2025
 
+https://streamable.com/xbrdxc (mp4 file is larger than 10mb)
 
-https://github.com/user-attachments/assets/77518569-2373-4c4b-aff0-3c5669aeba2f
-
-
+## 
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
