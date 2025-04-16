@@ -1,8 +1,7 @@
-# Progress as of 15/04/2025
+# Progress as of 16/04/2025
 
 
-https://streamable.com/xbrdxc
-
+[![Video Thumbnail](https://cdn.streamable.com/image/xbrdxc.jpg)](https://streamable.com/xbrdxc)
 
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
