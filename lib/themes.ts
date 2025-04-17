@@ -25,7 +25,7 @@ export const themes: Record<string, ThemeColors> = {
       primary: {
         "black": "#090B0B",
         "gray": "#5D5D5D",
-        "200": "#bfdbfe",
+        "dark": "#ddd4ca",
         "300": "#93c5fd",
         "400": "#60a5fa",
         "500": "#3b82f6",

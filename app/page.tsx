@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState, MouseEvent as ReactMouseEvent, useCallback, useRef } from "react";
-import { ChevronDown, ChevronRight, SeparatorVertical, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, SeparatorVertical, Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import React from "react";
 import confetti from 'canvas-confetti';
+import Link from "next/link";
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Translation {
   title: string;
@@ -14,6 +16,27 @@ interface Translation {
 interface Book {
   id: number;
   name: string;
+}
+
+interface Highlight {
+  id: string;
+  bookId: number;
+  bookName: string;
+  chapter: number;
+  verse: number;
+  text: string;
+  createdAt: number;
+}
+
+interface Note {
+  id: string;
+  bookId: number;
+  bookName: string;
+  chapter: number;
+  verse: number | null;
+  text: string;
+  category: string;
+  createdAt: number;
 }
 
 export default function Home() {
@@ -51,6 +74,23 @@ export default function Home() {
     matchingBooks?: Book[]
   } | null>(null);
   const debouncedSearchRef = useRef<NodeJS.Timeout | null>(null);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [noteCategories, setNoteCategories] = useState<string[]>(['General', 'Prayer', 'Study', 'Question', 'Insight']);
+  const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
+  const [currentNote, setCurrentNote] = useState<Note | null>(null);
+  const [hoveredVerse, setHoveredVerse] = useState<number | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    verse: number;
+  } | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const urlParamsProcessed = useRef(false);
 
   useEffect(() => {
     async function fetchTranslationsAndBooks() {
@@ -72,18 +112,26 @@ export default function Home() {
         setBooks(booksData);
   
         if (booksData.length > 0) {
-          const firstBook = booksData[0];
-          setLoadingBooks(prev => ({ ...prev, [firstBook.id]: true }));
+          // Check if there's a book ID in the URL
+          const urlBookId = searchParams.get('book');
+          const bookIdToOpen = urlBookId ? parseInt(urlBookId) : null;
+          
+          // Find the book to open - either from URL or default to first
+          const bookToOpen = bookIdToOpen 
+            ? booksData.find((b: Book) => b.id === bookIdToOpen) || booksData[0]
+            : booksData[0];
+          
+          setLoadingBooks(prev => ({ ...prev, [bookToOpen.id]: true }));
           const chaptersRes = await fetch(
-            `http://localhost:8000/translations/${selectedTranslationShort}/books/${firstBook.id}/chapters`
+            `http://localhost:8000/translations/${selectedTranslationShort}/books/${bookToOpen.id}/chapters`
           );
           const chaptersData = await chaptersRes.json();
           setChapterCounts(prev => ({
             ...prev,
-            [firstBook.id]: Object.keys(chaptersData).length,
+            [bookToOpen.id]: Object.keys(chaptersData).length,
           }));
-          setOpenBook(firstBook.name);
-          setLoadingBooks(prev => ({ ...prev, [firstBook.id]: false }));
+          setOpenBook(bookToOpen.name);
+          setLoadingBooks(prev => ({ ...prev, [bookToOpen.id]: false }));
         }
       } catch (error) {
         console.error("Error loading translations or books:", error);
@@ -164,6 +212,41 @@ export default function Home() {
     } else {
       // Initialize localStorage if it doesn't exist
       localStorage.setItem('completedBooks', JSON.stringify({}));
+    }
+  }, []);
+
+  // Load highlights and notes from localStorage on initial render
+  useEffect(() => {
+    // Load highlights
+    const savedHighlights = localStorage.getItem('highlights');
+    if (savedHighlights) {
+      try {
+        const parsed = JSON.parse(savedHighlights);
+        setHighlights(parsed);
+      } catch (error) {
+        console.error('Error parsing saved highlights:', error);
+        // If error parsing, initialize with empty array
+        localStorage.setItem('highlights', JSON.stringify([]));
+      }
+    } else {
+      // Initialize localStorage if it doesn't exist
+      localStorage.setItem('highlights', JSON.stringify([]));
+    }
+    
+    // Load notes
+    const savedNotes = localStorage.getItem('notes');
+    if (savedNotes) {
+      try {
+        const parsed = JSON.parse(savedNotes);
+        setNotes(parsed);
+      } catch (error) {
+        console.error('Error parsing saved notes:', error);
+        // If error parsing, initialize with empty array
+        localStorage.setItem('notes', JSON.stringify([]));
+      }
+    } else {
+      // Initialize localStorage if it doesn't exist
+      localStorage.setItem('notes', JSON.stringify([]));
     }
   }, []);
 
@@ -427,6 +510,22 @@ export default function Home() {
     document.removeEventListener("mouseup", stopRightDrag);
   };
 
+  // Function to fetch chapters for a book
+  const fetchChaptersForBook = async (bookId: number): Promise<void> => {
+    try {
+      const res = await fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${bookId}/chapters`);
+      const data = await res.json();
+      setChapterCounts(prev => ({
+        ...prev,
+        [bookId]: Object.keys(data).length,
+      }));
+      return Promise.resolve();
+    } catch (error) {
+      console.error(`Error fetching chapters for book ${bookId}:`, error);
+      return Promise.reject(error);
+    }
+  };
+
   const bookContentVariants = {
     hidden: {
       height: 0,
@@ -531,37 +630,55 @@ export default function Home() {
   };
   
   // Helper to update book completion status based on read chapters
-  const updateBookCompletionStatus = (bookId: number, updatedReadChapters: {[key: string]: boolean}) => {
-    // Only process if we have chapter count information
-    if (!chapterCounts[bookId]) return;
-    
+  const updateBookCompletionStatus = (bookId: number, readChapters: {[key: string]: boolean}) => {
     const totalChapters = chapterCounts[bookId];
+    if (totalChapters === undefined) return;
+
     let readCount = 0;
-    
     for (let i = 1; i <= totalChapters; i++) {
-      if (updatedReadChapters[`${bookId}-${i}`]) {
+      if (readChapters[`${bookId}-${i}`]) {
         readCount++;
       }
     }
     
-    // Check if all chapters are read
-    const isCompleted = readCount === totalChapters;
+    const isCompleted = readCount === totalChapters && totalChapters > 0;
+    const bookCompletedKey = bookId.toString();
     
-    // Update if the completion status has changed
+    // Only update if there's a change in completion status
     if (isCompleted !== !!completedBooks[bookId]) {
-      const updatedCompletedBooks = { ...completedBooks };
+      const newCompletedBooks = { ...completedBooks };
       
       if (isCompleted) {
-        // Mark book as completed
-        updatedCompletedBooks[bookId] = true;
+        newCompletedBooks[bookId] = true;
+        // Show confetti animation when completing a book
+        if (!completedBooks[bookId]) {
+          // Position confetti based on the open book in the sidebar
+          const bookElement = document.getElementById(`book-${bookId}`);
+          if (bookElement) {
+            const rect = bookElement.getBoundingClientRect();
+            const x = rect.right;
+            const y = rect.top + rect.height / 2;
+            
+            // Configure and launch confetti
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { 
+                x: x / window.innerWidth,
+                y: y / window.innerHeight
+              },
+              colors: ['#5DC75D', '#36A136', '#B2E5B2', '#4EB14E', '#297629'],
+              gravity: 1,
+              scalar: 1.2
+            });
+          }
+        }
       } else {
-        // Remove book from completed list
-        delete updatedCompletedBooks[bookId];
+        delete newCompletedBooks[bookId];
       }
       
-      // Update state and localStorage
-      setCompletedBooks(updatedCompletedBooks);
-      localStorage.setItem('completedBooks', JSON.stringify(updatedCompletedBooks));
+      setCompletedBooks(newCompletedBooks);
+      localStorage.setItem('completedBooks', JSON.stringify(newCompletedBooks));
     }
   };
 
@@ -581,7 +698,13 @@ export default function Home() {
       // If not read, mark it as read
       updatedReadChapters = { ...readChapters, [chapterKey]: true };
       // Only trigger confetti when marking as read (not when unmarking)
-      triggerConfetti();
+      confetti({
+        particleCount: 50,
+        spread: 70,
+        origin: { y: 0.6, x: 0.5 },
+        colors: ['#5DC75D', '#36A136', '#B2E5B2', '#4EB14E', '#297629'],
+        zIndex: 9999,
+      });
     }
     
     // Update state
@@ -592,60 +715,6 @@ export default function Home() {
     
     // Update book completion status
     updateBookCompletionStatus(bookId, updatedReadChapters);
-  };
-  
-  // Function to trigger confetti
-  const triggerConfetti = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6, x: 0.5 },
-      colors: ['#FFB6C1', '#FFDDC1', '#FFE4B5', '#D8BFD8', '#F5DEB3', '#FFD700'],
-      zIndex: 9999,
-    });
-  };
-  
-  
-  // Helper function for random numbers
-  const random = (min: number, max: number) => {
-    return Math.random() * (max - min) + min;
-  };
-
-  // Function to handle moving to the next chapter or book
-  const handleNextChapter = () => {
-    if (!selectedBookId || !selectedChapter) return;
-    
-    const currentBookIndex = books.findIndex(book => book.id === selectedBookId);
-    if (currentBookIndex === -1) return;
-    
-    const currentBook = books[currentBookIndex];
-    const totalChapters = chapterCounts[currentBook.id] || 0;
-    
-    // If not at the last chapter of the current book
-    if (selectedChapter < totalChapters) {
-      handleChapterClick(selectedBookId, selectedChapter + 1);
-    } 
-    // If at the last chapter and there's a next book
-    else if (currentBookIndex < books.length - 1) {
-      const nextBook = books[currentBookIndex + 1];
-      // Need to ensure chapters for next book are loaded
-      if (chapterCounts[nextBook.id]) {
-        handleChapterClick(nextBook.id, 1); // Go to first chapter of next book
-        // Ensure the book is open in the sidebar
-        if (openBook !== nextBook.name) {
-          toggleBook(nextBook.name);
-        }
-      } else {
-        // If chapters aren't loaded, load them first
-        toggleBook(nextBook.name);
-        // Use setTimeout to allow chapters to load before navigating
-        setTimeout(() => {
-          if (chapterCounts[nextBook.id]) {
-            handleChapterClick(nextBook.id, 1);
-          }
-        }, 500);
-      }
-    }
   };
 
   // Function to handle search logic
@@ -1124,6 +1193,184 @@ export default function Home() {
     }
   };
 
+  // Handle navigating to the next chapter
+  const handleNextChapter = () => {
+    if (!selectedBookId || !selectedChapter) return;
+    
+    // Find the current book
+    const currentBookIndex = books.findIndex(book => book.id === selectedBookId);
+    if (currentBookIndex === -1) return;
+    
+    const currentBook = books[currentBookIndex];
+    const totalChapters = chapterCounts[currentBook.id] || 0;
+    
+    // If there are more chapters in this book
+    if (selectedChapter < totalChapters) {
+      handleChapterClick(selectedBookId, selectedChapter + 1);
+    } else {
+      // If we're at the last chapter of the book, move to the next book
+      if (currentBookIndex < books.length - 1) {
+        const nextBook = books[currentBookIndex + 1];
+        setOpenBook(nextBook.name);
+        
+        // Fetch chapters for the next book if needed
+        if (!chapterCounts[nextBook.id]) {
+          fetchChaptersForBook(nextBook.id).then(() => {
+            // Once we have chapters, navigate to chapter 1
+            handleChapterClick(nextBook.id, 1);
+          });
+        } else {
+          // If we already have chapters, navigate directly
+          handleChapterClick(nextBook.id, 1);
+        }
+      }
+    }
+  };
+  
+  // Handle verse hover
+  const handleVerseHover = (verse: number | null) => {
+    setHoveredVerse(verse);
+  };
+  
+  // Handle context menu visibility
+  const handleContextMenu = (e: ReactMouseEvent, verse: number) => {
+    e.preventDefault();
+    
+    // Set context menu position and verse
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      verse: verse
+    });
+  };
+  
+  // Handle normal click on verse to show context menu
+  const handleVerseClick = (e: ReactMouseEvent, verse: number) => {
+    e.preventDefault();
+    
+    // Set context menu position and verse
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      verse: verse
+    });
+  };
+  
+  // Close context menu
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+  
+  // Save a note
+  const handleSaveNote = (text: string, category: string) => {
+    if (!selectedBookId || !selectedChapter || !contextMenu) return;
+    
+    // Create a new note
+    const newNote: Note = {
+      id: `note-${Date.now()}`,
+      bookId: selectedBookId,
+      bookName: books.find(b => b.id === selectedBookId)?.name || '',
+      chapter: selectedChapter,
+      verse: contextMenu.verse,
+      text,
+      category,
+      createdAt: Date.now()
+    };
+    
+    // Update state and localStorage
+    const updatedNotes = [...notes, newNote];
+    setNotes(updatedNotes);
+    localStorage.setItem('notes', JSON.stringify(updatedNotes));
+    
+    // Close the context menu
+    closeContextMenu();
+  };
+  
+  // Get verse text by verse number
+  const getVerseText = (verseNumber: number): string => {
+    const verse = verses.find(v => v.verse === verseNumber);
+    return verse ? verse.text : '';
+  };
+  
+  // Handle document click to close context menu when clicking outside
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      // Skip if context menu is not visible
+      if (!contextMenu?.visible) return;
+      
+      // Check if the click is inside the context menu
+      const contextMenuElement = document.getElementById('verse-context-menu');
+      if (contextMenuElement && !contextMenuElement.contains(e.target as Node)) {
+        closeContextMenu();
+      }
+    };
+    
+    // Add event listener
+    document.addEventListener('click', handleDocumentClick);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, [contextMenu]);
+
+  // Add useEffect for URL parameters at the end of other useEffects
+  useEffect(() => {
+    // Only process URL parameters once and only after books are loaded
+    if (books.length > 0 && !urlParamsProcessed.current) {
+      const bookId = searchParams.get('book');
+      const chapter = searchParams.get('chapter');
+      const verse = searchParams.get('verse');
+      
+      if (bookId && chapter) {
+        const bookIdNum = parseInt(bookId);
+        const chapterNum = parseInt(chapter);
+        
+        if (!isNaN(bookIdNum) && !isNaN(chapterNum)) {
+          const book = books.find(b => b.id === bookIdNum);
+          if (book) {
+            // Mark as processed to prevent infinite loops
+            urlParamsProcessed.current = true;
+            
+            // Use the lower-level functions to avoid chained state updates
+            if (openBook !== book.name) {
+              setOpenBook(book.name);
+            }
+            
+            setSelectedBookId(bookIdNum);
+            setSelectedChapter(chapterNum);
+            
+            // Fetch the verses directly
+            fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${bookIdNum}/chapters/${chapterNum}/verses`)
+              .then(res => res.json())
+              .then(data => {
+                setVerses(data);
+                
+                // Handle verse scrolling after content is loaded
+                if (verse) {
+                  const verseNum = parseInt(verse);
+                  if (!isNaN(verseNum)) {
+                    setTimeout(() => {
+                      const verseElement = document.getElementById(`verse-${verseNum}`);
+                      if (verseElement) {
+                        verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        verseElement.classList.add("!bg-[var(--border)]");
+                      }
+                    }, 1000);
+                  }
+                }
+              })
+              .catch(error => {
+                console.error("Error fetching verses:", error);
+              });
+          }
+        }
+      }
+    }
+  }, [books, searchParams, selectedTranslationShort]);
+
   return (
     <main className="min-h-screen h-full bg-[var(--background)] text-black p-[0px] m-[0px]">
       <header className="w-full h-[60px] bg-[var(--foreground)] text-[var(--primary-black)] flex items-center justify-center border-b-[1px] border-[var(--border)]">
@@ -1177,6 +1424,13 @@ export default function Home() {
         </dialog>
 
         <h1 className="font-primary font-[400] text-[24px] mx-[20px]">{selectedTranslation}</h1>
+        
+        <Link 
+          href="/notes" 
+          className="flex items-center text-[var(--primary-gray)] text-[15px] cursor-pointer font-primary h-[32px] px-[10px] bg-[var(--background)] text-[#555555] font-medium rounded-[12px] shadow-[0_0_14px_0_rgba(108,103,97,0.06)] border-none hover:bg-[#f0ece6] transition-all duration-200 no-underline"
+        >
+          Notes
+        </Link>
       </header>
 
       <div className="container mx-auto px-4 mr-[10px] flex h-full text-[var(--primary-black)]">
@@ -1280,7 +1534,7 @@ export default function Home() {
                 >
                   <button 
                     className={`
-                      px-[12px] py-[6px] rounded-[12px] mt-[8px] border shadow-sm font-primary cursor-pointer
+                      px-[12px] py-[6px] rounded-[12px] mt-[4px] border shadow-sm font-primary cursor-pointer
                       shadow-[0_0_14px_0_rgba(108,103,97,0.06)]
                       transition-all duration-200
                       ${selectedBookId !== null && selectedChapter !== null && isChapterRead(selectedBookId, selectedChapter) 
@@ -1330,15 +1584,13 @@ export default function Home() {
                       onChange={handleSearchInputChange}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          // No need to handle Enter key separately since search happens automatically
-                          // but keep it for immediate search if user prefers to press Enter
                           handleSearch();
                         }
                       }}
                       autoFocus
                     />
                     <div
-                      className="absolute right-[16px] top-[50%] transform -translate-y-1/2] cursor-pointer"
+                      className="absolute right-[16px] top-1/2 -translate-y-1/2 cursor-pointer"
                       onClick={() => handleSearch()}
                     >
                       <Search className="text-[#684242]" size={20} />
@@ -1645,7 +1897,15 @@ export default function Home() {
                 
                 {displayMode === 1 ? (
                   verses.map((verse) => (
-                    <p key={verse.verse} id={`verse-${verse.verse}`}>
+                    <p 
+                      key={verse.verse} 
+                      id={`verse-${verse.verse}`}
+                      className={`transition-colors duration-200 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                      onMouseEnter={() => handleVerseHover(verse.verse)}
+                      onMouseLeave={() => handleVerseHover(null)}
+                      onClick={(e) => handleVerseClick(e, verse.verse)}
+                      onContextMenu={(e) => handleContextMenu(e, verse.verse)}
+                    >
                       <strong>{verse.verse}</strong> {verse.text}
                     </p>
                   ))
@@ -1653,9 +1913,25 @@ export default function Home() {
                   <div className="flex flex-wrap gap-x-2 text-justify">
                     {verses.map((verse) => (
                       <React.Fragment key={verse.verse}>
-                        <strong id={`verse-${verse.verse}`} className="mr-1">{verse.verse}{'\u00A0'}</strong>
+                        <strong 
+                          id={`verse-${verse.verse}`}
+                          className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                          onMouseEnter={() => handleVerseHover(verse.verse)}
+                          onMouseLeave={() => handleVerseHover(null)}
+                          onClick={(e) => handleVerseClick(e, verse.verse)}
+                          onContextMenu={(e) => handleContextMenu(e, verse.verse)}
+                        >
+                          {verse.verse}{'\u00A0'}
+                        </strong>
                         {verse.text.trim().split(" ").map((word, index) => (
-                          <span key={`${verse.verse}-${index}`} className="inline-block">
+                          <span 
+                            key={`${verse.verse}-${index}`} 
+                            className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                            onMouseEnter={() => handleVerseHover(verse.verse)}
+                            onMouseLeave={() => handleVerseHover(null)}
+                            onClick={(e) => handleVerseClick(e, verse.verse)}
+                            onContextMenu={(e) => handleContextMenu(e, verse.verse)}
+                          >
                             {word}
                             {'\u00A0'}
                           </span>
@@ -1671,9 +1947,25 @@ export default function Home() {
                       <div className="flex flex-wrap text-justify">
                         {verses.slice(0, Math.ceil(verses.length / 2)).map((verse) => (
                           <React.Fragment key={`left-${verse.verse}`}>
-                            <strong id={`verse-${verse.verse}`} className="mr-1">{verse.verse}{'\u00A0'}</strong>
+                            <strong 
+                              id={`verse-${verse.verse}`}
+                              className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                              onMouseEnter={() => handleVerseHover(verse.verse)}
+                              onMouseLeave={() => handleVerseHover(null)}
+                              onClick={(e) => handleVerseClick(e, verse.verse)}
+                              onContextMenu={(e) => handleContextMenu(e, verse.verse)}
+                            >
+                              {verse.verse}{'\u00A0'}
+                            </strong>
                             {verse.text.trim().split(" ").map((word, index) => (
-                              <span key={`left-${verse.verse}-${index}`} className="inline-block">
+                              <span 
+                                key={`left-${verse.verse}-${index}`} 
+                                className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                                onMouseEnter={() => handleVerseHover(verse.verse)}
+                                onMouseLeave={() => handleVerseHover(null)}
+                                onClick={(e) => handleVerseClick(e, verse.verse)}
+                                onContextMenu={(e) => handleContextMenu(e, verse.verse)}
+                              >
                                 {word}
                                 {'\u00A0'}
                               </span>
@@ -1688,9 +1980,25 @@ export default function Home() {
                       <div className="flex flex-wrap text-justify">
                         {verses.slice(Math.ceil(verses.length / 2)).map((verse) => (
                           <React.Fragment key={`right-${verse.verse}`}>
-                            <strong id={`verse-${verse.verse}`} className="mr-1">{verse.verse}{'\u00A0'}</strong>
+                            <strong 
+                              id={`verse-${verse.verse}`}
+                              className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                              onMouseEnter={() => handleVerseHover(verse.verse)}
+                              onMouseLeave={() => handleVerseHover(null)}
+                              onClick={(e) => handleVerseClick(e, verse.verse)}
+                              onContextMenu={(e) => handleContextMenu(e, verse.verse)}
+                            >
+                              {verse.verse}{'\u00A0'}
+                            </strong>
                             {verse.text.trim().split(" ").map((word, index) => (
-                              <span key={`right-${verse.verse}-${index}`} className="inline-block">
+                              <span 
+                                key={`right-${verse.verse}-${index}`} 
+                                className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                                onMouseEnter={() => handleVerseHover(verse.verse)}
+                                onMouseLeave={() => handleVerseHover(null)}
+                                onClick={(e) => handleVerseClick(e, verse.verse)}
+                                onContextMenu={(e) => handleContextMenu(e, verse.verse)}
+                              >
                                 {word}
                                 {'\u00A0'}
                               </span>
@@ -1781,6 +2089,42 @@ export default function Home() {
 
 
       </div>
+      
+      {/* Context Menu */}
+      {contextMenu && contextMenu.visible && (
+        <div
+          id="verse-context-menu"
+          className="fixed bg-[var(--foreground)] rounded-[12px] shadow-[0_0_14px_0_rgba(108,103,97,0.06)] border border-[var(--border)] p-[8px] z-50 max-w-[350px]"
+          style={{
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+          }}
+        >
+          <div className="font-primary font-medium text-[var(--primary-black)] mb-[6px] text-[15px]">
+            Verse {contextMenu.verse}
+          </div>
+          <div className="text-[13px] mb-[12px] italic text-[var(--primary-gray)] text-ellipsis font-primary">
+            {getVerseText(contextMenu.verse)}
+          </div>
+          <div className="gap-[2px] flex flex-col border border-[var(--primary-dark)] rounded-[8px] overflow-hidden">
+            {noteCategories.map(category => (
+              <button
+                key={category}
+                className="w-full text-left py-[6px] px-[8px] text-sm hover:bg-[#f0ece6] bg-transparent border-none transition-colors duration-200 font-primary text-[var(--primary-black)]"
+                onClick={() => handleSaveNote(getVerseText(contextMenu.verse), category)}
+              >
+                Add to {category}
+              </button>
+            ))}
+          </div>
+          <button
+            className="absolute top-[6px] right-[6px] bg-transparent border-none text-[var(--primary-gray)] hover:text-[var(--primary-black)] transition-colors duration-200"
+            onClick={closeContextMenu}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </main>
   );
 }
