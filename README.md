@@ -1,6 +1,6 @@
 # Progress as of 16/04/2025
 
-https://streamable.com/xbrdxc (mp4 file is larger than 10mb)
+https://streamable.com/fw14f5 (mp4 file is larger than 10mb)
 
 ## 
 
