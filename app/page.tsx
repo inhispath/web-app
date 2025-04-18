@@ -138,10 +138,10 @@ function HomeContent() {
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [selectedBookId, setSelectedBookId] = useState<number | null>(null);
   const [verses, setVerses] = useState<{ verse: number; text: string }[]>([]);
-  const [displayMode, setDisplayMode] = useState<1 | 2 | 3>(1);
-  const [prevDisplayMode, setPrevDisplayMode] = useState<1 | 2 | 3>(1);
-  const [rightSectionWidth, setRightSectionWidth] = useState(200);
-  const [dragging, setDragging] = useState<true | false>(false);
+  const [displayMode, setDisplayMode] = useState<1 | 2 | 3>(3);
+  const [prevDisplayMode, setPrevDisplayMode] = useState<1 | 2 | 3>(3);
+  const [rightSectionWidth, setRightSectionWidth] = useState(300);
+  const [dragging, setDragging] = useState(false);
   const [prevChapter, setPrevChapter] = useState<number | null>(null);
   const [prevBookId, setPrevBookId] = useState<number | null>(null);
   const [readChapters, setReadChapters] = useState<{[key: string]: boolean}>({});
@@ -293,8 +293,8 @@ function HomeContent() {
         setDisplayMode(displayModeNum as 1 | 2 | 3);
       }
     } else {
-      // If no saved value, set the default to 1 and save it
-      localStorage.setItem('displayMode', '1');
+      // If no saved value, set the default to 3 and save it
+      localStorage.setItem('displayMode', '3');
     }
   }, []);
 
