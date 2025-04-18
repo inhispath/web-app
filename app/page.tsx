@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState, MouseEvent as ReactMouseEvent, useCallback, useRef } from "react";
-import { ChevronDown, ChevronRight, SeparatorVertical, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, SeparatorVertical, Search, X, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import React from "react";
 import confetti from 'canvas-confetti';
 import Link from "next/link";
 import { useRouter, useSearchParams } from 'next/navigation';
+
+// Get API URL from environment variable
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 interface Translation {
   title: string;
@@ -80,6 +83,7 @@ export default function Home() {
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
+  const [shareVerse, setShareVerse] = useState<number | null>(null);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [hoveredVerse, setHoveredVerse] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -88,14 +92,17 @@ export default function Home() {
     y: number;
     verse: number;
   } | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const urlParamsProcessed = useRef(false);
+  const [isInitialRender, setIsInitialRender] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   useEffect(() => {
     async function fetchTranslationsAndBooks() {
       try {
-        const res = await fetch("http://localhost:8000/translations");
+        const res = await fetch(`${API_BASE_URL}/translations`);
         const data = await res.json();
         setTranslations(data);
   
@@ -106,7 +113,7 @@ export default function Home() {
         if (!defaultTranslation) return;
   
         const booksRes = await fetch(
-          `http://localhost:8000/translations/${selectedTranslationShort}/books`
+          `${API_BASE_URL}/translations/${selectedTranslationShort}/books`
         );
         const booksData = await booksRes.json();
         setBooks(booksData);
@@ -123,7 +130,7 @@ export default function Home() {
           
           setLoadingBooks(prev => ({ ...prev, [bookToOpen.id]: true }));
           const chaptersRes = await fetch(
-            `http://localhost:8000/translations/${selectedTranslationShort}/books/${bookToOpen.id}/chapters`
+            `${API_BASE_URL}/translations/${selectedTranslationShort}/books/${bookToOpen.id}/chapters`
           );
           const chaptersData = await chaptersRes.json();
           setChapterCounts(prev => ({
@@ -145,7 +152,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchBooks() {
       try {
-        const response = await fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books`);
+        const response = await fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books`);
         const data = await response.json();
         setBooks(data);
         if (data.length > 0) setOpenBook(data[0].name);
@@ -157,11 +164,19 @@ export default function Home() {
     if (selectedTranslationShort) fetchBooks();
   }, [selectedTranslationShort]);
 
-  // Add useEffect for initialization from localStorage
+  // Add useEffect for loading preferences from localStorage
   useEffect(() => {
     // Try to get saved translation preferences from localStorage
     const savedTranslation = localStorage.getItem('selectedTranslation');
     const savedTranslationShort = localStorage.getItem('selectedTranslationShort');
+    const savedDisplayMode = localStorage.getItem('displayMode');
+    
+    // Set default note categories if they don't exist
+    const savedNoteCategories = localStorage.getItem('noteCategories');
+    if (!savedNoteCategories) {
+      const defaultCategories = ['General', 'Prayer', 'Study', 'Question', 'Insight'];
+      localStorage.setItem('noteCategories', JSON.stringify(defaultCategories));
+    }
 
     // Set translation state if saved values exist
     if (savedTranslation) {
@@ -177,6 +192,17 @@ export default function Home() {
     } else {
       // If no saved value, set the default and save it
       localStorage.setItem('selectedTranslationShort', 'AKJV');
+    }
+    
+    // Set display mode if saved value exists
+    if (savedDisplayMode) {
+      const displayModeNum = parseInt(savedDisplayMode);
+      if (!isNaN(displayModeNum) && [1, 2, 3].includes(displayModeNum)) {
+        setDisplayMode(displayModeNum as 1 | 2 | 3);
+      }
+    } else {
+      // If no saved value, set the default to 1 and save it
+      localStorage.setItem('displayMode', '1');
     }
   }, []);
 
@@ -217,36 +243,38 @@ export default function Home() {
 
   // Load highlights and notes from localStorage on initial render
   useEffect(() => {
-    // Load highlights
-    const savedHighlights = localStorage.getItem('highlights');
-    if (savedHighlights) {
-      try {
-        const parsed = JSON.parse(savedHighlights);
-        setHighlights(parsed);
-      } catch (error) {
-        console.error('Error parsing saved highlights:', error);
-        // If error parsing, initialize with empty array
-        localStorage.setItem('highlights', JSON.stringify([]));
-      }
-    } else {
-      // Initialize localStorage if it doesn't exist
-      localStorage.setItem('highlights', JSON.stringify([]));
-    }
-    
-    // Load notes
+    // Load notes from localStorage
     const savedNotes = localStorage.getItem('notes');
     if (savedNotes) {
       try {
-        const parsed = JSON.parse(savedNotes);
+        const parsed = JSON.parse(savedNotes) as Note[];
         setNotes(parsed);
       } catch (error) {
         console.error('Error parsing saved notes:', error);
-        // If error parsing, initialize with empty array
-        localStorage.setItem('notes', JSON.stringify([]));
       }
-    } else {
-      // Initialize localStorage if it doesn't exist
-      localStorage.setItem('notes', JSON.stringify([]));
+    }
+    
+    // Load categories from localStorage
+    const savedCategories = localStorage.getItem('noteCategories');
+    if (savedCategories) {
+      try {
+        const parsedCategories = JSON.parse(savedCategories) as string[];
+        setNoteCategories(parsedCategories);
+      } catch (error) {
+        console.error('Error parsing saved categories:', error);
+        // If there's an error, we'll use the default categories that were set in useState
+      }
+    }
+    
+    // Load highlights from localStorage
+    const savedHighlights = localStorage.getItem('highlights');
+    if (savedHighlights) {
+      try {
+        const parsed = JSON.parse(savedHighlights) as Highlight[];
+        setHighlights(parsed);
+      } catch (error) {
+        console.error('Error parsing saved highlights:', error);
+      }
     }
   }, []);
 
@@ -392,7 +420,7 @@ export default function Home() {
     setLoadingBooks(prev => ({ ...prev, [book.id]: true }));
   
     try {
-      const res = await fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${book.id}/chapters`);
+      const res = await fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books/${book.id}/chapters`);
       const data = await res.json();
       const newChapterCounts = { ...chapterCounts, [book.id]: Object.keys(data).length };
       setChapterCounts(newChapterCounts);
@@ -416,9 +444,13 @@ export default function Home() {
     setSelectedChapter(chapter);
     setSelectedBookId(bookId);
     
+    // Reset the selected verse when changing chapters
+    // This prevents verse highlighting from persisting when navigating to a different chapter
+    setSelectedVerse(null);
+    
     try {
       const res = await fetch(
-        `http://localhost:8000/translations/${selectedTranslationShort}/books/${bookId}/chapters/${chapter}/verses`
+        `${API_BASE_URL}/translations/${selectedTranslationShort}/books/${bookId}/chapters/${chapter}/verses`
       );
       const data = await res.json();
       setVerses(data);
@@ -513,7 +545,7 @@ export default function Home() {
   // Function to fetch chapters for a book
   const fetchChaptersForBook = async (bookId: number): Promise<void> => {
     try {
-      const res = await fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${bookId}/chapters`);
+      const res = await fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books/${bookId}/chapters`);
       const data = await res.json();
       setChapterCounts(prev => ({
         ...prev,
@@ -552,8 +584,35 @@ export default function Home() {
 
   // Create a function to handle display mode changes with tracking
   const handleDisplayModeChange = (newMode: 1 | 2 | 3) => {
+    if (newMode === displayMode) return;
+    
+    // Store prev mode for transition animations
     setPrevDisplayMode(displayMode);
+    
+    // Update the current display mode
     setDisplayMode(newMode);
+    
+    // Save to localStorage
+    localStorage.setItem('displayMode', newMode.toString());
+    
+    // Animation logic to handle changing display modes
+    const contentContainer = document.getElementById('center-section');
+    if (contentContainer) {
+      contentContainer.classList.add('transitioning');
+      setTimeout(() => {
+        contentContainer.classList.remove('transitioning');
+      }, 400);
+    }
+    
+    // Update right section visibility
+    const rightSpacer = document.getElementById('right-spacer');
+    if (rightSpacer) {
+      if (newMode === 2) {
+        rightSpacer.style.width = `${rightSectionWidth}px`;
+      } else {
+        rightSpacer.style.width = '0';
+      }
+    }
   };
 
   // Enhanced animation variants to handle both display mode and chapter changes
@@ -702,7 +761,7 @@ export default function Home() {
         particleCount: 50,
         spread: 70,
         origin: { y: 0.6, x: 0.5 },
-        colors: ['#5DC75D', '#36A136', '#B2E5B2', '#4EB14E', '#297629'],
+        colors: ['#FF6B6B', '#FFA94D', '#FFD93D', '#FF7F50', '#FFB347', '#FF5E78', '#F9AFAE', '#F4A261', '#E76F51', '#D26A5C'],
         zIndex: 9999,
       });
     }
@@ -941,7 +1000,7 @@ export default function Home() {
       });
       
       // Fetch chapters for this book
-      fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${matchedBook.id}/chapters`)
+      fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books/${matchedBook.id}/chapters`)
         .then(res => res.json())
         .then(data => {
           const totalChapters = Object.keys(data).length;
@@ -989,7 +1048,7 @@ export default function Home() {
       });
       
       // Load chapters
-      fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${matchedBook.id}/chapters`)
+      fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books/${matchedBook.id}/chapters`)
         .then(res => res.json())
         .then(data => {
           // Update chapter counts
@@ -1061,7 +1120,7 @@ export default function Home() {
       });
       
       // Load chapters
-      fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${matchedBook.id}/chapters`)
+      fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books/${matchedBook.id}/chapters`)
         .then(res => res.json())
         .then(data => {
           // Update chapter counts
@@ -1115,7 +1174,7 @@ export default function Home() {
   const fetchVerse = async (bookId: number, chapter: number, verse: number) => {
     try {
       const res = await fetch(
-        `http://localhost:8000/translations/${selectedTranslationShort}/books/${bookId}/chapters/${chapter}/verses`
+        `${API_BASE_URL}/translations/${selectedTranslationShort}/books/${bookId}/chapters/${chapter}/verses`
       );
       const data = await res.json();
       
@@ -1323,6 +1382,25 @@ export default function Home() {
       const bookId = searchParams.get('book');
       const chapter = searchParams.get('chapter');
       const verse = searchParams.get('verse');
+      const urlDisplayMode = searchParams.get('display');
+      const translation = searchParams.get('translation');
+      
+      // Handle display mode from URL
+      if (urlDisplayMode) {
+        const displayModeNum = parseInt(urlDisplayMode);
+        if (!isNaN(displayModeNum) && [1, 2, 3].includes(displayModeNum)) {
+          setDisplayMode(displayModeNum as 1 | 2 | 3);
+        }
+      }
+      
+      // Handle translation from URL if it exists
+      if (translation && translation !== selectedTranslationShort) {
+        const matchingTranslation = translations.find(t => t.translation === translation);
+        if (matchingTranslation) {
+          setSelectedTranslation(matchingTranslation.title);
+          setSelectedTranslationShort(translation);
+        }
+      }
       
       if (bookId && chapter) {
         const bookIdNum = parseInt(bookId);
@@ -1343,7 +1421,7 @@ export default function Home() {
             setSelectedChapter(chapterNum);
             
             // Fetch the verses directly
-            fetch(`http://localhost:8000/translations/${selectedTranslationShort}/books/${bookIdNum}/chapters/${chapterNum}/verses`)
+            fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books/${bookIdNum}/chapters/${chapterNum}/verses`)
               .then(res => res.json())
               .then(data => {
                 setVerses(data);
@@ -1352,11 +1430,27 @@ export default function Home() {
                 if (verse) {
                   const verseNum = parseInt(verse);
                   if (!isNaN(verseNum)) {
+                    setSelectedVerse(verseNum);
+                    
+                    // Allow time for the render to complete
                     setTimeout(() => {
+                      // Get the main verse element
                       const verseElement = document.getElementById(`verse-${verseNum}`);
                       if (verseElement) {
+                        // Scroll to the verse
                         verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        verseElement.classList.add("!bg-[var(--border)]");
+                        
+                        // Add highlight to the verse number
+                        verseElement.classList.add("bg-[var(--border)]");
+                        
+                        // For display modes 2 and 3, highlight all words in the verse
+                        if (displayMode === 2 || displayMode === 3) {
+                          // Get all spans that belong to this verse
+                          const verseWords = document.querySelectorAll(`[data-verse="${verseNum}"]`);
+                          verseWords.forEach(el => {
+                            (el as HTMLElement).classList.add("bg-[var(--border)]");
+                          });
+                        }
                       }
                     }, 1000);
                   }
@@ -1369,7 +1463,67 @@ export default function Home() {
         }
       }
     }
-  }, [books, searchParams, selectedTranslationShort]);
+  }, [books, searchParams, selectedTranslationShort, translations, displayMode]);
+
+  // Function to get the share URL of the current chapter or verse
+  const getShareUrl = () => {
+    if (!selectedBookId || !selectedChapter) return '';
+    
+    const baseUrl = window.location.origin;
+    const bookName = books.find(b => b.id === selectedBookId)?.name || '';
+    const verseParam = shareVerse ? `&verse=${shareVerse}` : '';
+    const translationParam = `&translation=${selectedTranslationShort}`;
+    const displayModeParam = `&display=${displayMode}`;
+    
+    return `${baseUrl}?book=${selectedBookId}&chapter=${selectedChapter}${verseParam}${translationParam}${displayModeParam}`;
+  };
+  
+  // Function to copy the URL to clipboard
+  const copyToClipboard = async () => {
+    const shareUrl = getShareUrl();
+    if (!shareUrl) return;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopySuccess(true);
+      
+      // Reset success message after 3 seconds
+      setTimeout(() => {
+        setCopySuccess(false);
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      setCopySuccess(false);
+    }
+  };
+
+  // Function to handle verse selection for sharing
+  const handleShareVerseSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const verseNum = parseInt(event.target.value);
+    if (!isNaN(verseNum)) {
+      setShareVerse(verseNum);
+    } else {
+      setShareVerse(null);
+    }
+  };
+
+  // Add useEffect to remove URL query parameters after they've been processed
+  useEffect(() => {
+    // Only run this after initial data has been loaded and processed
+    if (!isInitialRender || !verses.length) return;
+    
+    // Get current URL and check if it has query parameters
+    const hasQueryParams = window.location.search !== '';
+    
+    if (hasQueryParams && typeof window !== 'undefined') {
+      // Use history API to update URL without page refresh
+      const url = window.location.pathname;
+      window.history.replaceState({}, document.title, url);
+    }
+    
+    // Mark initial render as complete
+    setIsInitialRender(false);
+  }, [isInitialRender, verses.length]);
 
   return (
     <main className="min-h-screen h-full bg-[var(--background)] text-black p-[0px] m-[0px]">
@@ -1396,7 +1550,7 @@ export default function Home() {
             <input
               type="text"
               placeholder={`Search from ${translations.length} translations`}
-              className="w-full shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-[1px] outline-[#F1EBE1] bg-[var(--foreground)] border-none rounded-[12px] px-[16px] py-[12px] placeholder:text-[var(--primary-gray)] box-border"
+              className="w-full text-[var(--primary-black)] shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-[1px] outline-[#F1EBE1] bg-[var(--foreground)] border-none rounded-[12px] px-[16px] py-[12px] placeholder:text-[var(--primary-gray)] box-border"
               onChange={handleTranslationSearchChange}
               autoFocus
             />
@@ -1477,9 +1631,9 @@ export default function Home() {
                                   ? "bg-[#d4ffd4] border-[#5DC75D]" // Darker green for selected + read
                                   : "bg-[var(--foreground)] border-[var(--border)]" // Default selected
                                 : isChapterRead(book.id, i + 1)
-                                ? "border-[#5DC75D] bg-[#EEFFEE] text-[#5DC75D]" // Read but not selected
+                                ? "border-[#5DC75D] bg-[#EEFFEE] !text-[#5DC75D]" // Read but not selected
                                 : "border-[var(--border)] bg-transparent" // Unread
-                            } text-sm flex items-center justify-center hover:bg-primary-50 hover:border-primary-200 transition-all duration-50`}
+                            } text-sm flex items-center justify-center text-[var(--primary-black)] hover:bg-primary-50 hover:border-primary-200 transition-all duration-50`}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleChapterClick(book.id, i + 1)}
@@ -1571,6 +1725,23 @@ export default function Home() {
                 <Search size={16} className="text-[#684242]" />
                 <span>Search</span>
               </button>
+              
+              {/* Share Button */}
+              <button
+                className="px-[12px] h-[36px] font-primary
+                  shadow-[0_0_14px_0_rgba(108,103,97,0.06)] rounded-[12px] border border-[#F1ECE5] shadow-sm
+                  bg-transparent text-[#684242] hover:bg-[#f0ece6]
+                  transition-all duration-200 flex items-center gap-[6px] cursor-pointer"
+                onClick={() => {
+                  // Reset copy success state when opening modal
+                  setCopySuccess(false);
+                  const modal = document.getElementById('share_modal') as HTMLDialogElement;
+                  if (modal) modal.showModal();
+                }}
+              >
+                <Share2 size={16} className="text-[#684242]" />
+                <span>Share</span>
+              </button>
 
               {/* Search Modal */}
               <dialog id="search_modal" className="modal">
@@ -1578,8 +1749,8 @@ export default function Home() {
                   <div className="relative flex items-center w-full">
                     <input
                       type="text"
-                      placeholder="Search (e.g. 'Genesis', 'Genesis 1', or 'Genesis 1:1')"
-                      className="w-full shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-[1px] outline-[#F1EBE1] bg-[var(--foreground)] border-none rounded-[12px] px-[16px] py-[12px] placeholder:text-[var(--primary-gray)] box-border"
+                      placeholder="Search"
+                      className="w-full text-[var(--primary-black)] shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-[1px] outline-[#F1EBE1] bg-[var(--foreground)] border-none rounded-[12px] px-[16px] py-[12px] placeholder:text-[var(--primary-gray)] box-border"
                       value={searchQuery}
                       onChange={handleSearchInputChange}
                       onKeyDown={(e) => {
@@ -1593,7 +1764,7 @@ export default function Home() {
                       className="absolute right-[16px] top-1/2 -translate-y-1/2 cursor-pointer"
                       onClick={() => handleSearch()}
                     >
-                      <Search className="text-[#684242]" size={20} />
+                      <Search className="text-[#684242]" size={16} />
                     </div>
                   </div>
 
@@ -1601,10 +1772,9 @@ export default function Home() {
                   <div className="mt-[12px] p-[12px] text-sm text-[var(--primary-gray)] font-primary">
                     <p className="text-[var(--primary-black)]">Search examples:</p>
                     <ul className="list-none pl-5 mt-[9px]">
-                      <li><b className="text-[var(--primary-black)]">John</b> - Find the book of John</li>
-                      <li><b className="text-[var(--primary-black)]">I Kings</b> - Find First Kings</li>
-                      <li><b className="text-[var(--primary-black)]">John 3</b> or <b>I Kings 3</b> - Go to chapter 3</li>
-                      <li><b className="text-[var(--primary-black)]">John 3:16</b> or <b>I Kings 3:1</b> - Find specific verses</li>
+                      <li><b className="font-[600] text-[var(--primary-black)]">John</b> - Find the book of John</li>
+                      <li><b className="font-[600] text-[var(--primary-black)]">John 3</b> - Go to chapter 3</li>
+                      <li><b className="font-[600] text-[var(--primary-black)]">John 3:16</b> - Find specific verses</li>
                     </ul>
                   </div>
                   
@@ -1812,6 +1982,126 @@ export default function Home() {
                   <button>close</button>
                 </form>
               </dialog>
+              
+              {/* Share Modal */}
+              <dialog id="share_modal" className="modal">
+                <div className="modal-box p-[12px] rounded-[14px] bg-[var(--background)]">
+                  <h3 className="text-lg font-primary font-medium mb-[16px]">Share Link</h3>
+                  
+                  <div className="flex flex-col gap-[12px]">
+                    {selectedBookId && selectedChapter ? (
+                      <>
+                        <div className="flex gap-6 px-4 py-3 shadow-[0_0_14px_0_rgba(108,103,97,0.06)] rounded-[12px] border border-[#F1ECE5] shadow-sm">
+                          {/* Display Mode Buttons */}
+                          <div className="flex items-center gap-6">
+                            {/* Align Left */}
+                            <button
+                              onClick={() => handleDisplayModeChange(1)}
+                              className={`w-[36px] h-[36px] border-none flex items-center justify-center transition rounded-full cursor-pointer ${
+                                displayMode === 1 ? "bg-transparent" : "bg-transparent"
+                              }`}
+                              aria-label="Align Left"
+                            >
+                              <svg width="20" height="20" fill="none" stroke={displayMode === 1 ? "#684242" : "#BBA8A8"} strokeWidth="2" viewBox="0 0 24 24">
+                                <path d="M4 6h8M4 12h16M4 18h12" />
+                              </svg>
+                            </button>
+
+                            {/* Align Center */}
+                            <button
+                              onClick={() => handleDisplayModeChange(2)}
+                              className={`w-[36px] h-[36px] border-none flex items-center justify-center transition rounded-full cursor-pointer ${
+                                displayMode === 2 ? "bg-transparent" : "bg-transparent"
+                              }`}
+                              aria-label="Align Center"
+                            >
+                              <svg width="20" height="20" fill="none" stroke={displayMode === 2 ? "#684242" : "#BBA8A8"} strokeWidth="2" viewBox="0 0 24 24">
+                                <path d="M6 6h12M4 12h16M6 18h12" />
+                              </svg>
+                            </button>
+
+                            {/* Grid View */}
+                            <button
+                              onClick={() => handleDisplayModeChange(3)}
+                              className={`w-[36px] h-[36px] border-none flex items-center justify-center transition rounded-full cursor-pointer ${
+                                displayMode === 3 ? "bg-transparent" : "bg-transparent"
+                              }`}
+                              aria-label="Grid View"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                                <rect x="8" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                                <rect y="4" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                                <rect x="8" y="4" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                                <rect y="8" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                                <rect x="8" y="8" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                                <rect y="12" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                                <rect x="8" y="12" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Verse Selector */}
+                        <div className="mt-2">
+                          <div className="font-primary text-[var(--primary-black)] mb-[6px]">
+                            Select what to share:
+                          </div>
+                          <select
+                            onChange={handleShareVerseSelect}
+                            value={shareVerse || ""}
+                            className="w-full shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-[1px] outline-[#F1EBE1] bg-[var(--foreground)] border-none rounded-[12px] px-[16px] py-[10px] text-sm font-primary text-[var(--primary-black)] appearance-none"
+                          >
+                            <option value="">Entire Chapter</option>
+                            {verses.map(verse => (
+                              <option key={verse.verse} value={verse.verse}>
+                                Verse {verse.verse}: {verse.text.length > 40 ? verse.text.substring(0, 40) + '...' : verse.text}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* URL Display */}
+                        <div className="mt-2">
+                          <div className="font-primary text-[var(--primary-black)] mb-[6px]">
+                            Share this link to the {shareVerse ? 'verse' : 'chapter'}:
+                          </div>
+                          <div className="flex items-center w-full">
+                            <input
+                              type="text"
+                              readOnly
+                              value={getShareUrl()}
+                              className="w-full shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-none bg-[var(--foreground)] border border-[#F1ECE5] rounded-l-[12px] rounded-r-none px-[16px] py-[10px] text-sm font-primary text-[var(--primary-gray)] cursor-text overflow-hidden text-ellipsis"
+                            />
+                            <button
+                              onClick={copyToClipboard}
+                              className="py-[10px] px-[16px] font-primary shadow-[0_0_14px_0_rgba(108,103,97,0.06)] border border-l-0 border-[#F1ECE5] rounded-r-[12px] rounded-l-none text-[#684242] bg-[var(--foreground)] hover:bg-[#f0ece6] transition-all duration-200 flex items-center gap-[6px] cursor-pointer whitespace-nowrap"
+                            >
+                              <span>{copySuccess ? 'Copied!' : 'Copy'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-[var(--primary-gray)] font-primary">
+                        Please select a chapter to get a shareable link.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Close Button */}
+                  <div className="mt-[16px] flex justify-end">
+                    <form method="dialog">
+                      <button className="px-[12px] py-[6px] rounded-[12px] border border-[var(--border)] shadow-sm font-primary shadow-[0_0_14px_0_rgba(108,103,97,0.06)] bg-[var(--foreground)] text-[var(--primary-black)] hover:bg-[#f0ece6] transition-all duration-200">
+                        Close
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <form method="dialog" className="modal-backdrop opacity-0">
+                  <button>close</button>
+                </form>
+              </dialog>
 
               <div className="flex gap-6 px-4 py-3 shadow-[0_0_14px_0_rgba(108,103,97,0.06)] rounded-[12px] border border-[#F1ECE5] shadow-sm cursor-pointer">
                 
@@ -1900,7 +2190,7 @@ export default function Home() {
                     <p 
                       key={verse.verse} 
                       id={`verse-${verse.verse}`}
-                      className={`transition-colors duration-200 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                      className={`transition-colors duration-200 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}`}
                       onMouseEnter={() => handleVerseHover(verse.verse)}
                       onMouseLeave={() => handleVerseHover(null)}
                       onClick={(e) => handleVerseClick(e, verse.verse)}
@@ -1915,7 +2205,7 @@ export default function Home() {
                       <React.Fragment key={verse.verse}>
                         <strong 
                           id={`verse-${verse.verse}`}
-                          className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                          className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}`}
                           onMouseEnter={() => handleVerseHover(verse.verse)}
                           onMouseLeave={() => handleVerseHover(null)}
                           onClick={(e) => handleVerseClick(e, verse.verse)}
@@ -1925,8 +2215,9 @@ export default function Home() {
                         </strong>
                         {verse.text.trim().split(" ").map((word, index) => (
                           <span 
-                            key={`${verse.verse}-${index}`} 
-                            className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                            key={`${verse.verse}-${index}`}
+                            data-verse={verse.verse}
+                            className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}`}
                             onMouseEnter={() => handleVerseHover(verse.verse)}
                             onMouseLeave={() => handleVerseHover(null)}
                             onClick={(e) => handleVerseClick(e, verse.verse)}
@@ -1949,7 +2240,7 @@ export default function Home() {
                           <React.Fragment key={`left-${verse.verse}`}>
                             <strong 
                               id={`verse-${verse.verse}`}
-                              className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                              className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}`}
                               onMouseEnter={() => handleVerseHover(verse.verse)}
                               onMouseLeave={() => handleVerseHover(null)}
                               onClick={(e) => handleVerseClick(e, verse.verse)}
@@ -1959,8 +2250,9 @@ export default function Home() {
                             </strong>
                             {verse.text.trim().split(" ").map((word, index) => (
                               <span 
-                                key={`left-${verse.verse}-${index}`} 
-                                className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                                key={`left-${verse.verse}-${index}`}
+                                data-verse={verse.verse}
+                                className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}`}
                                 onMouseEnter={() => handleVerseHover(verse.verse)}
                                 onMouseLeave={() => handleVerseHover(null)}
                                 onClick={(e) => handleVerseClick(e, verse.verse)}
@@ -1982,7 +2274,7 @@ export default function Home() {
                           <React.Fragment key={`right-${verse.verse}`}>
                             <strong 
                               id={`verse-${verse.verse}`}
-                              className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                              className={`mr-1 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}`}
                               onMouseEnter={() => handleVerseHover(verse.verse)}
                               onMouseLeave={() => handleVerseHover(null)}
                               onClick={(e) => handleVerseClick(e, verse.verse)}
@@ -1992,8 +2284,9 @@ export default function Home() {
                             </strong>
                             {verse.text.trim().split(" ").map((word, index) => (
                               <span 
-                                key={`right-${verse.verse}-${index}`} 
-                                className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''}`}
+                                key={`right-${verse.verse}-${index}`}
+                                data-verse={verse.verse}
+                                className={`inline-block ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}`}
                                 onMouseEnter={() => handleVerseHover(verse.verse)}
                                 onMouseLeave={() => handleVerseHover(null)}
                                 onClick={(e) => handleVerseClick(e, verse.verse)}

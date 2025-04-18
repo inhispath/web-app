@@ -38,6 +38,9 @@ export default function NotesPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [newCategory, setNewCategory] = useState<string>('');
   const [categoryToEdit, setCategoryToEdit] = useState<string | null>(null);
+  
+  // Default categories that will always be available
+  const DEFAULT_CATEGORIES = ['General', 'Prayer', 'Study', 'Question', 'Insight'];
 
   // Load notes and highlights from localStorage
   useEffect(() => {
@@ -59,9 +62,30 @@ export default function NotesPage() {
         const parsed = JSON.parse(savedNotes) as Note[];
         setNotes(parsed);
         
-        // Extract unique categories
+        // Extract unique categories from notes
         const uniqueCategories = Array.from(new Set(parsed.map(note => note.category)));
-        setCategories(uniqueCategories);
+        
+        // Load saved categories from localStorage or initialize with categories from notes
+        const savedCategories = localStorage.getItem('noteCategories');
+        if (savedCategories) {
+          try {
+            const parsedCategories = JSON.parse(savedCategories) as string[];
+            // Ensure default categories are always included
+            const mergedCategories = Array.from(new Set([...DEFAULT_CATEGORIES, ...parsedCategories, ...uniqueCategories]));
+            setCategories(mergedCategories);
+          } catch (error) {
+            console.error('Error parsing saved categories:', error);
+            // If error parsing, ensure default categories are included
+            const fallbackCategories = Array.from(new Set([...DEFAULT_CATEGORIES, ...uniqueCategories]));
+            setCategories(fallbackCategories);
+          }
+        } else {
+          // If no saved categories, use defaults plus any from notes
+          const initialCategories = Array.from(new Set([...DEFAULT_CATEGORIES, ...uniqueCategories]));
+          setCategories(initialCategories);
+          // Initialize localStorage with these categories
+          localStorage.setItem('noteCategories', JSON.stringify(initialCategories));
+        }
         
         // Extract unique books
         const uniqueBooks = Array.from(
@@ -71,6 +95,10 @@ export default function NotesPage() {
       } catch (error) {
         console.error('Error parsing saved notes:', error);
       }
+    } else {
+      // If no notes exist yet, at least set up the default categories
+      setCategories(DEFAULT_CATEGORIES);
+      localStorage.setItem('noteCategories', JSON.stringify(DEFAULT_CATEGORIES));
     }
   }, []);
 
@@ -117,6 +145,9 @@ export default function NotesPage() {
     const updatedCategories = [...categories, newCategory.trim()];
     setCategories(updatedCategories);
     
+    // Save updated categories to localStorage
+    localStorage.setItem('noteCategories', JSON.stringify(updatedCategories));
+    
     // Reset input
     setNewCategory('');
     
@@ -128,6 +159,11 @@ export default function NotesPage() {
   // Function to handle editing an existing category
   const handleEditCategory = () => {
     if (!newCategory.trim() || !categoryToEdit) return;
+    
+    // Prevent editing "General" category
+    if (categoryToEdit === "General") {
+      return;
+    }
     
     // Check if the edited name already exists (and is not the current category)
     if (categories.includes(newCategory.trim()) && newCategory.trim() !== categoryToEdit) {
@@ -153,6 +189,9 @@ export default function NotesPage() {
     );
     setCategories(updatedCategories);
     
+    // Save updated categories to localStorage
+    localStorage.setItem('noteCategories', JSON.stringify(updatedCategories));
+    
     // Reset input and selected category
     setNewCategory('');
     setCategoryToEdit(null);
@@ -164,6 +203,11 @@ export default function NotesPage() {
 
   // Function to handle deleting a category
   const handleDeleteCategory = (categoryName: string) => {
+    // Prevent deleting "General" category
+    if (categoryName === "General") {
+      return;
+    }
+    
     // Update all notes with this category to "General"
     const updatedNotes = notes.map(note => {
       if (note.category === categoryName) {
@@ -179,6 +223,9 @@ export default function NotesPage() {
     // Remove category from list
     const updatedCategories = categories.filter(cat => cat !== categoryName);
     setCategories(updatedCategories);
+    
+    // Save updated categories to localStorage
+    localStorage.setItem('noteCategories', JSON.stringify(updatedCategories));
     
     // If the deleted category was selected as a filter, reset the filter
     if (filterCategory === categoryName) {
@@ -321,7 +368,7 @@ export default function NotesPage() {
                   <input
                     type="text"
                     placeholder="Category name"
-                    className="w-full bg-transparent border-none px-[16px] py-[12px] placeholder:text-[var(--primary-gray)] font-primary outline-none"
+                    className="w-full text-[var(--primary-black)] bg-transparent border-none px-[16px] py-[12px] placeholder:text-[var(--primary-gray)] font-primary outline-none"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     onKeyDown={(e) => {
@@ -332,7 +379,7 @@ export default function NotesPage() {
                     autoFocus
                   />
                   <button
-                    className="bg-transparent text-[var(--primary-black)] px-[16px] font-primary hover:bg-[#f0ece6] transition-all duration-200 border-none"
+                    className="bg-transparent text-[var(--primary-black)] px-[16px] font-primary hover:bg-[#f0ece6] transition-all duration-200 border-none cursor-pointer"
                     onClick={categoryToEdit ? handleEditCategory : handleAddCategory}
                   >
                     {categoryToEdit ? 'Update' : 'Add'}
@@ -367,19 +414,25 @@ export default function NotesPage() {
                     {categories.map((category, index) => (
                       <div
                         key={index}
-                        className="flex justify-between items-center px-[18px] py-[10px] rounded-[8px] hover:bg-[var(--foreground)] transition-all duration-200 cursor-pointer"
+                        className={`flex justify-between items-center px-[18px] py-[10px] rounded-[8px] hover:bg-[var(--foreground)] transition-all duration-200 ${category === "General" ? "opacity-70" : "cursor-pointer"}`}
                         onClick={() => {
-                          setNewCategory(category);
-                          setCategoryToEdit(category);
+                          if (category !== "General") {
+                            setNewCategory(category);
+                            setCategoryToEdit(category);
+                          }
                         }}
                       >
-                        <span className="font-primary text-[var(--primary-black)] text-[14px]">{category}</span>
+                        <span className="font-primary text-[var(--primary-black)] text-[14px]">
+                          {category}
+                        </span>
                         <button
-                          className="bg-transparent border-none text-[var(--primary-gray)] hover:text-[var(--danger-500)] transition-colors duration-200 flex items-center justify-center"
+                          className={`bg-transparent border-none text-[var(--primary-gray)] hover:text-[var(--danger-500)] transition-colors duration-200 flex items-center justify-center ${category === "General" ? "opacity-30 cursor-not-allowed" : ""}`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Remove confirm dialog and just proceed with deletion
-                            handleDeleteCategory(category);
+                            // Only allow deletion for non-General categories
+                            if (category !== "General") {
+                              handleDeleteCategory(category);
+                            }
                           }}
                         >
                           <X size={14} />
