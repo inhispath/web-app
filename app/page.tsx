@@ -3,7 +3,7 @@
 import { useEffect, useState, MouseEvent as ReactMouseEvent, useCallback, useRef } from "react";
 import { ChevronDown, ChevronRight, SeparatorVertical, Search, X, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import React from "react";
+import React, { Suspense } from 'react';
 import confetti from 'canvas-confetti';
 import Link from "next/link";
 import { useRouter, useSearchParams } from 'next/navigation';
