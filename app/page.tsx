@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, MouseEvent as ReactMouseEvent, useCallback, useRef } from "react";
-import { ChevronDown, ChevronRight, SeparatorVertical, Search, X, Share2 } from "lucide-react";
+import { ChevronDown, ChevronRight, SeparatorVertical, Search, X, Share2, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import React, { Suspense } from 'react';
 import confetti from 'canvas-confetti';
@@ -43,6 +43,17 @@ interface Note {
 }
 
 export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin mr-2"><Loader2 size={24} /></div>
+      <p className="font-primary text-[var(--primary-black)]">Loading...</p>
+    </div>}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTranslation, setSelectedTranslation] = useState("American King James Version");
