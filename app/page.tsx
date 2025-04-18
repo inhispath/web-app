@@ -11,6 +11,79 @@ import { useRouter, useSearchParams } from 'next/navigation';
 // Get API URL from environment variable
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
+// Hardcoded Bible book lists
+const OLD_TESTAMENT_BOOKS = [
+  { id: 1, name: "Genesis" },
+  { id: 2, name: "Exodus" },
+  { id: 3, name: "Leviticus" },
+  { id: 4, name: "Numbers" },
+  { id: 5, name: "Deuteronomy" },
+  { id: 6, name: "Joshua" },
+  { id: 7, name: "Judges" },
+  { id: 8, name: "Ruth" },
+  { id: 9, name: "1 Samuel" },
+  { id: 10, name: "2 Samuel" },
+  { id: 11, name: "1 Kings" },
+  { id: 12, name: "2 Kings" },
+  { id: 13, name: "1 Chronicles" },
+  { id: 14, name: "2 Chronicles" },
+  { id: 15, name: "Ezra" },
+  { id: 16, name: "Nehemiah" },
+  { id: 17, name: "Esther" },
+  { id: 18, name: "Job" },
+  { id: 19, name: "Psalms" },
+  { id: 20, name: "Proverbs" },
+  { id: 21, name: "Ecclesiastes" },
+  { id: 22, name: "Song of Solomon" },
+  { id: 23, name: "Isaiah" },
+  { id: 24, name: "Jeremiah" },
+  { id: 25, name: "Lamentations" },
+  { id: 26, name: "Ezekiel" },
+  { id: 27, name: "Daniel" },
+  { id: 28, name: "Hosea" },
+  { id: 29, name: "Joel" },
+  { id: 30, name: "Amos" },
+  { id: 31, name: "Obadiah" },
+  { id: 32, name: "Jonah" },
+  { id: 33, name: "Micah" },
+  { id: 34, name: "Nahum" },
+  { id: 35, name: "Habakkuk" },
+  { id: 36, name: "Zephaniah" },
+  { id: 37, name: "Haggai" },
+  { id: 38, name: "Zechariah" },
+  { id: 39, name: "Malachi" }
+];
+
+const NEW_TESTAMENT_BOOKS = [
+  { id: 40, name: "Matthew" },
+  { id: 41, name: "Mark" },
+  { id: 42, name: "Luke" },
+  { id: 43, name: "John" },
+  { id: 44, name: "Acts" },
+  { id: 45, name: "Romans" },
+  { id: 46, name: "1 Corinthians" },
+  { id: 47, name: "2 Corinthians" },
+  { id: 48, name: "Galatians" },
+  { id: 49, name: "Ephesians" },
+  { id: 50, name: "Philippians" },
+  { id: 51, name: "Colossians" },
+  { id: 52, name: "1 Thessalonians" },
+  { id: 53, name: "2 Thessalonians" },
+  { id: 54, name: "1 Timothy" },
+  { id: 55, name: "2 Timothy" },
+  { id: 56, name: "Titus" },
+  { id: 57, name: "Philemon" },
+  { id: 58, name: "Hebrews" },
+  { id: 59, name: "James" },
+  { id: 60, name: "1 Peter" },
+  { id: 61, name: "2 Peter" },
+  { id: 62, name: "1 John" },
+  { id: 63, name: "2 John" },
+  { id: 64, name: "3 John" },
+  { id: 65, name: "Jude" },
+  { id: 66, name: "Revelation" }
+];
+
 interface Translation {
   title: string;
   translation: string;
@@ -109,6 +182,8 @@ function HomeContent() {
   const urlParamsProcessed = useRef(false);
   const [isInitialRender, setIsInitialRender] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [openOldTestament, setOpenOldTestament] = useState(false);
+  const [openNewTestament, setOpenNewTestament] = useState(false);
 
   useEffect(() => {
     async function fetchTranslationsAndBooks() {
@@ -163,12 +238,18 @@ function HomeContent() {
   useEffect(() => {
     async function fetchBooks() {
       try {
-        const response = await fetch(`${API_BASE_URL}/translations/${selectedTranslationShort}/books`);
-        const data = await response.json();
-        setBooks(data);
-        if (data.length > 0) setOpenBook(data[0].name);
+        // Combine Old and New Testament books
+        const allBooks = [...OLD_TESTAMENT_BOOKS, ...NEW_TESTAMENT_BOOKS];
+        setBooks(allBooks);
+        
+        // Set up loading state for all books
+        const loadingState = allBooks.reduce((acc, book) => {
+          acc[book.id] = false;
+          return acc;
+        }, {} as { [bookId: number]: boolean });
+        setLoadingBooks(loadingState);
       } catch (error) {
-        console.error('Error fetching books:', error);
+        console.error('Error setting up books:', error);
       }
     }
 
@@ -464,7 +545,14 @@ function HomeContent() {
         `${API_BASE_URL}/translations/${selectedTranslationShort}/books/${bookId}/chapters/${chapter}/verses`
       );
       const data = await res.json();
-      setVerses(data);
+      
+      // Ensure the data is an array before setting it to the verses state
+      if (Array.isArray(data)) {
+        setVerses(data);
+      } else {
+        console.error("API response is not an array:", data);
+        setVerses([]);
+      }
       
       // Scroll to the top of the page after loading chapter data
       window.scrollTo({
@@ -1536,6 +1624,27 @@ function HomeContent() {
     setIsInitialRender(false);
   }, [isInitialRender, verses.length]);
 
+  // Function to check if a book is in the Old Testament
+  const isOldTestamentBook = (bookId: number): boolean => {
+    return bookId >= 1 && bookId <= 39;
+  };
+
+  // Function to check if a book is in the New Testament
+  const isNewTestamentBook = (bookId: number): boolean => {
+    return bookId >= 40 && bookId <= 66;
+  };
+
+  // Add useEffect to open the correct testament dropdown when a book is selected
+  useEffect(() => {
+    if (selectedBookId) {
+      if (isOldTestamentBook(selectedBookId)) {
+        setOpenOldTestament(true);
+      } else if (isNewTestamentBook(selectedBookId)) {
+        setOpenNewTestament(true);
+      }
+    }
+  }, [selectedBookId]);
+
   return (
     <main className="min-h-screen h-full bg-[var(--background)] text-black p-[0px] m-[0px]">
       <header className="w-full h-[60px] bg-[var(--foreground)] text-[var(--primary-black)] flex items-center justify-center border-b-[1px] border-[var(--border)]">
@@ -1601,63 +1710,185 @@ function HomeContent() {
       <div className="container mx-auto px-4 mr-[10px] flex h-full text-[var(--primary-black)]">
         <div id="left-section" className="w-1/3 p-[16px] overflow-auto flex justify-end">
           <div className="space-y-2 text-[26px] font-primary mt-[20px]">
-            {books.map((book) => (
-              <div key={book.name}>
-                <div
-                  id={`book-${book.id}`}
-                  className={`cursor-pointer flex items-center gap-[6px] mb-[16px] transition-colors duration-200 ${
-                    isBookCompleted(book.id) 
-                      ? "text-[#5DC75D]" // Green text for completed books
-                      : "hover:text-primary-600"
-                  }`}
-                  onClick={() => toggleBook(book.name)}
+            {/* Old Testament Dropdown */}
+            <div>
+              <div
+                className="cursor-pointer flex items-center gap-[6px] mb-[16px] transition-colors duration-200 hover:text-primary-600"
+                onClick={() => setOpenOldTestament(!openOldTestament)}
+              >
+                <span className="font-medium text-[22px]">Old Testament</span>
+                <motion.div
+                  initial="closed"
+                  animate={openOldTestament ? "open" : "closed"}
+                  variants={chevronVariants}
+                  transition={{ duration: 0.3 }}
                 >
-                  {book.name}
-                  <motion.div
-                    initial="closed"
-                    animate={openBook === book.name ? "open" : "closed"}
-                    variants={chevronVariants}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ChevronRight size={20} className={isBookCompleted(book.id) ? "text-[#5DC75D]" : ""} />
-                  </motion.div>
+                  <ChevronRight size={20} />
+                </motion.div>
       </div>
 
-                <AnimatePresence>
-                  {openBook === book.name && !loadingBooks[book.id] && (
-                    <motion.div
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={bookContentVariants}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-5 gap-x-[10px] gap-y-[10px] max-w-fit mt-[16px] mb-[36px] px-[1px]">
-                        {Array.from({ length: chapterCounts[book.id] || 0 }, (_, i) => (
-                          <motion.button
-                            key={i}
-                            className={`w-[40px] h-[40px] font-primary rounded-[6px] border ${
-                              selectedBookId === book.id && selectedChapter === i + 1
-                                ? isChapterRead(book.id, i + 1)
-                                  ? "bg-[#d4ffd4] border-[#5DC75D]" // Darker green for selected + read
-                                  : "bg-[var(--foreground)] border-[var(--border)]" // Default selected
-                                : isChapterRead(book.id, i + 1)
-                                ? "border-[#5DC75D] bg-[#EEFFEE] !text-[#5DC75D]" // Read but not selected
-                                : "border-[var(--border)] bg-transparent" // Unread
-                            } text-sm flex items-center justify-center text-[var(--primary-black)] hover:bg-primary-50 hover:border-primary-200 transition-all duration-50`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleChapterClick(book.id, i + 1)}
+              <AnimatePresence>
+                {openOldTestament && (
+                  <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={bookContentVariants}
+                    className="overflow-hidden ml-[12px]"
+                  >
+                    <div className="space-y-2 mb-[24px]">
+                      {OLD_TESTAMENT_BOOKS.map((book) => (
+                        <div key={book.name}>
+                          <div
+                            id={`book-${book.id}`}
+                            className={`cursor-pointer flex items-center gap-[6px] mb-[12px] transition-colors duration-200 text-[20px] ${
+                              isBookCompleted(book.id) 
+                                ? "text-[#5DC75D]" // Green text for completed books
+                                : "hover:text-primary-600"
+                            }`}
+                            onClick={() => toggleBook(book.name)}
                           >
-                            {i + 1}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                            {book.name}
+                            <motion.div
+                              initial="closed"
+                              animate={openBook === book.name ? "open" : "closed"}
+                              variants={chevronVariants}
+                              transition={{ duration: 0.3 }}
+                            >
+                              <ChevronRight size={18} className={isBookCompleted(book.id) ? "text-[#5DC75D]" : ""} />
+                            </motion.div>
+                          </div>
+
+                          <AnimatePresence>
+                            {openBook === book.name && !loadingBooks[book.id] && (
+                              <motion.div
+                                initial="hidden"
+                                animate="visible"
+                                exit="hidden"
+                                variants={bookContentVariants}
+                                className="overflow-hidden"
+                              >
+                                <div className="grid grid-cols-5 gap-x-[10px] gap-y-[10px] max-w-fit mt-[16px] mb-[24px] px-[1px]">
+                                  {Array.from({ length: chapterCounts[book.id] || 0 }, (_, i) => (
+                                    <motion.button
+                                      key={i}
+                                      className={`w-[40px] h-[40px] font-primary rounded-[6px] border ${
+                                        selectedBookId === book.id && selectedChapter === i + 1
+                                          ? isChapterRead(book.id, i + 1)
+                                            ? "bg-[#d4ffd4] border-[#5DC75D]" // Darker green for selected + read
+                                            : "bg-[var(--foreground)] border-[var(--border)]" // Default selected
+                                          : isChapterRead(book.id, i + 1)
+                                          ? "border-[#5DC75D] bg-[#EEFFEE] !text-[#5DC75D]" // Read but not selected
+                                          : "border-[var(--border)] bg-transparent" // Unread
+                                      } text-sm flex items-center justify-center text-[var(--primary-black)] hover:bg-primary-50 hover:border-primary-200 transition-all duration-50`}
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleChapterClick(book.id, i + 1)}
+                                    >
+                                      {i + 1}
+                                    </motion.button>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* New Testament Dropdown */}
+            <div>
+              <div
+                className="cursor-pointer flex items-center gap-[6px] mb-[16px] transition-colors duration-200 hover:text-primary-600"
+                onClick={() => setOpenNewTestament(!openNewTestament)}
+              >
+                <span className="font-medium text-[22px]">New Testament</span>
+                <motion.div
+                  initial="closed"
+                  animate={openNewTestament ? "open" : "closed"}
+                  variants={chevronVariants}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronRight size={20} />
+                </motion.div>
               </div>
-            ))}
+
+              <AnimatePresence>
+                {openNewTestament && (
+                  <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={bookContentVariants}
+                    className="overflow-hidden ml-[12px]"
+                  >
+                    <div className="space-y-2 mb-[24px]">
+                      {NEW_TESTAMENT_BOOKS.map((book) => (
+                        <div key={book.name}>
+                          <div
+                            id={`book-${book.id}`}
+                            className={`cursor-pointer flex items-center gap-[6px] mb-[12px] transition-colors duration-200 text-[20px] ${
+                              isBookCompleted(book.id) 
+                                ? "text-[#5DC75D]" // Green text for completed books
+                                : "hover:text-primary-600"
+                            }`}
+                            onClick={() => toggleBook(book.name)}
+                          >
+                            {book.name}
+                            <motion.div
+                              initial="closed"
+                              animate={openBook === book.name ? "open" : "closed"}
+                              variants={chevronVariants}
+                              transition={{ duration: 0.3 }}
+                            >
+                              <ChevronRight size={18} className={isBookCompleted(book.id) ? "text-[#5DC75D]" : ""} />
+                            </motion.div>
+                          </div>
+
+                          <AnimatePresence>
+                            {openBook === book.name && !loadingBooks[book.id] && (
+                              <motion.div
+                                initial="hidden"
+                                animate="visible"
+                                exit="hidden"
+                                variants={bookContentVariants}
+                                className="overflow-hidden"
+                              >
+                                <div className="grid grid-cols-5 gap-x-[10px] gap-y-[10px] max-w-fit mt-[16px] mb-[24px] px-[1px]">
+                                  {Array.from({ length: chapterCounts[book.id] || 0 }, (_, i) => (
+                                    <motion.button
+                                      key={i}
+                                      className={`w-[40px] h-[40px] font-primary rounded-[6px] border ${
+                                        selectedBookId === book.id && selectedChapter === i + 1
+                                          ? isChapterRead(book.id, i + 1)
+                                            ? "bg-[#d4ffd4] border-[#5DC75D]" // Darker green for selected + read
+                                            : "bg-[var(--foreground)] border-[var(--border)]" // Default selected
+                                          : isChapterRead(book.id, i + 1)
+                                          ? "border-[#5DC75D] bg-[#EEFFEE] !text-[#5DC75D]" // Read but not selected
+                                          : "border-[var(--border)] bg-transparent" // Unread
+                                      } text-sm flex items-center justify-center text-[var(--primary-black)] hover:bg-primary-50 hover:border-primary-200 transition-all duration-50`}
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleChapterClick(book.id, i + 1)}
+                                    >
+                                      {i + 1}
+                                    </motion.button>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
@@ -2064,7 +2295,7 @@ function HomeContent() {
                             className="w-full shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-[1px] outline-[#F1EBE1] bg-[var(--foreground)] border-none rounded-[12px] px-[16px] py-[10px] text-sm font-primary text-[var(--primary-black)] appearance-none"
                           >
                             <option value="">Entire Chapter</option>
-                            {verses.map(verse => (
+                            {Array.isArray(verses) && verses.map(verse => (
                               <option key={verse.verse} value={verse.verse}>
                                 Verse {verse.verse}: {verse.text.length > 40 ? verse.text.substring(0, 40) + '...' : verse.text}
                               </option>
@@ -2176,7 +2407,7 @@ function HomeContent() {
               isChapterChange: prevChapter !== selectedChapter || prevBookId !== selectedBookId
             }}
           >
-            {verses.length > 0 ? (
+            {Array.isArray(verses) && verses.length > 0 ? (
               <motion.div
                 key={`chapter-${selectedBookId}-${selectedChapter}-${displayMode}`}
                 custom={{ 
@@ -2197,7 +2428,7 @@ function HomeContent() {
                 </h1>
                 
                 {displayMode === 1 ? (
-                  verses.map((verse) => (
+                  Array.isArray(verses) && verses.map((verse) => (
                     <p 
                       key={verse.verse} 
                       id={`verse-${verse.verse}`}
@@ -2212,7 +2443,7 @@ function HomeContent() {
                   ))
                 ) : displayMode === 2 ? (
                   <div className="flex flex-wrap gap-x-2 text-justify">
-                    {verses.map((verse) => (
+                    {Array.isArray(verses) && verses.map((verse) => (
                       <React.Fragment key={verse.verse}>
                         <strong 
                           id={`verse-${verse.verse}`}
@@ -2247,7 +2478,7 @@ function HomeContent() {
                     {/* Left page */}
                     <div className="w-[48%] pr-4 space-y-2">
                       <div className="flex flex-wrap text-justify">
-                        {verses.slice(0, Math.ceil(verses.length / 2)).map((verse) => (
+                        {Array.isArray(verses) && verses.slice(0, Math.ceil(verses.length / 2)).map((verse) => (
                           <React.Fragment key={`left-${verse.verse}`}>
                             <strong 
                               id={`verse-${verse.verse}`}
@@ -2281,7 +2512,7 @@ function HomeContent() {
                     {/* Right page */}
                     <div className="w-[48%] pl-4 space-y-2">
                       <div className="flex flex-wrap text-justify">
-                        {verses.slice(Math.ceil(verses.length / 2)).map((verse) => (
+                        {Array.isArray(verses) && verses.slice(Math.ceil(verses.length / 2)).map((verse) => (
                           <React.Fragment key={`right-${verse.verse}`}>
                             <strong 
                               id={`verse-${verse.verse}`}
