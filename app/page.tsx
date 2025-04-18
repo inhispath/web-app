@@ -44,7 +44,7 @@ interface Note {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
       <div className="animate-spin mr-2"><Loader2 size={24} /></div>
       <p className="font-primary text-[var(--primary-black)]">Loading...</p>
     </div>}>
@@ -1621,7 +1621,7 @@ function HomeContent() {
                   >
                     <ChevronRight size={20} className={isBookCompleted(book.id) ? "text-[#5DC75D]" : ""} />
                   </motion.div>
-                </div>
+      </div>
 
                 <AnimatePresence>
                   {openBook === book.name && !loadingBooks[book.id] && (
