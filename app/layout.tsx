@@ -12,6 +12,7 @@ import {
   albertSans,
   lato
 } from "../lib/fonts";
+import MobileBlocker from "./components/MobileBlocker";
 
 export const metadata: Metadata = {
   title: "In His Path",
@@ -70,7 +71,9 @@ export default function RootLayout({
       `}>
         <ThemeProvider>
           <FontProvider>
-            {children}
+            <MobileBlocker>
+              {children}
+            </MobileBlocker>
           </FontProvider>
         </ThemeProvider>
       </body>
