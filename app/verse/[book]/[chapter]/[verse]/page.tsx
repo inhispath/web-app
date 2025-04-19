@@ -124,7 +124,6 @@ export default async function VersePage({
     book,
     chapter,
     verse,
-    translation: "AKJV"
   });
   
   const redirectUrl = `/?${query.toString()}`;
@@ -175,44 +174,47 @@ export default async function VersePage({
         <meta property="og:url" content={`https://beta.inhispath.com/verse/${book}/${chapter}/${verse}`} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="In His Path" />
-        
+
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${bookName} ${chapter}:${verse} | In His Path`} />
         <meta name="twitter:description" content={verseText} />
         <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg" />
-        
+
         <title>{`${bookName} ${chapter}:${verse} | In His Path`}</title>
         <meta name="description" content={verseText} />
-        
-        {/* Redirect after a short delay to give crawlers time to read the meta tags */}
-        <meta httpEquiv="refresh" content={`2;url=${redirectUrl}`} />
-        <script dangerouslySetInnerHTML={{ 
-          __html: `setTimeout(function() { window.location.href = '${redirectUrl}'; }, 1000);` 
-        }} />
       </head>
-      <body style={{ 
+      <body style={{
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        maxWidth: '600px', 
-        margin: '0 auto', 
-        padding: '40px 20px',
+        width: '100%',
+        margin: '0',
+        padding: '0',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
         textAlign: 'center',
-        lineHeight: 1.6,
-        color: '#333'
+        overflow: 'hidden'
       }}>
-        <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>{`${bookName} ${chapter}:${verse}`}</h1>
-        <p style={{ fontSize: '18px', marginBottom: '30px', fontStyle: 'italic' }}>"{verseText}"</p>
-        <p>Redirecting to Bible reading view...</p>
-        <a href={redirectUrl} style={{ 
-          display: 'inline-block',
-          background: '#684242',
-          color: 'white',
-          padding: '10px 20px',
-          borderRadius: '8px',
-          textDecoration: 'none',
-          marginTop: '20px'
+        <div style={{
+          textAlign: 'center', 
+          padding: '40px 20px',
+          lineHeight: 1.6,
+          color: '#333',
         }}>
-          Continue to In His Path
-        </a>
+          <h1 style={{ fontSize: '24px', marginBottom: '20px' }} className="font-primary">{`${bookName} ${chapter}:${verse}`}</h1>
+          <p style={{ fontSize: '18px', marginBottom: '30px', fontStyle: 'italic', maxWidth: '800px' }} className="font-primary">{verseText}</p>
+          <a href={redirectUrl} style={{
+            display: 'inline-block',
+            background: '#684242',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            marginTop: '20px'
+          }}>
+            View in Chapter
+          </a>
+        </div>
       </body>
     </html>
   );

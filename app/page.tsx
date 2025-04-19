@@ -1576,10 +1576,14 @@ function HomeContent() {
     if (!selectedBookId || !selectedChapter) return '';
     
     const baseUrl = window.location.origin;
-    const bookName = books.find(b => b.id === selectedBookId)?.name || '';
-    const verseParam = shareVerse ? `&verse=${shareVerse}` : '';
     
-    return `${baseUrl}?book=${selectedBookId}&chapter=${selectedChapter}${verseParam}`;
+    // If a specific verse is selected, use the /verse/book/chapter/verse URL format
+    if (shareVerse) {
+      return `${baseUrl}/verse/${selectedBookId}/${selectedChapter}/${shareVerse}`;
+    }
+    
+    // Otherwise, use the query parameters format for entire chapters
+    return `${baseUrl}?book=${selectedBookId}&chapter=${selectedChapter}`;
   };
   
   // Function to copy the URL to clipboard
