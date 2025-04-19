@@ -3,64 +3,34 @@ import type { Metadata } from 'next';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
-interface Book {
-  id: number;
-  name: string;
-}
+export default function Page(props: any) {
+  const { book, chapter, display } = props.params;
+  const verse = props.searchParams?.verse;
+  const translation = props.searchParams?.translation || 'AKJV';
 
-interface Verse {
-  verse: number;
-  text: string;
-}
-
-interface Params {
-  book: string;
-  chapter: string;
-  display: string;
-}
-
-interface SearchParams {
-  verse?: string;
-  translation?: string;
-}
-
-export default function Page({ 
-  params,
-  searchParams 
-}: { 
-  params: Params;
-  searchParams: SearchParams;
-}) {
-  const { book, chapter, display } = params;
   const query = new URLSearchParams({
     book,
     chapter,
     display,
-    translation: searchParams.translation || 'AKJV',
-    ...(searchParams.verse && { verse: searchParams.verse }),
+    translation,
+    ...(verse && { verse }),
   });
   
   redirect(`/?${query.toString()}`);
 }
 
-export async function generateMetadata({ 
-  params,
-  searchParams 
-}: { 
-  params: Params;
-  searchParams: SearchParams;
-}): Promise<Metadata> {
-  const { book, chapter, display } = params;
-  const verse = searchParams.verse || '1';
-  const translation = searchParams.translation || 'AKJV';
+export async function generateMetadata(props: any): Promise<Metadata> {
+  const { book, chapter, display } = props.params;
+  const verse = props.searchParams?.verse || '1';
+  const translation = props.searchParams?.translation || 'AKJV';
 
   let verseText = 'Bible verse from In His Path.';
   let bookName = book;
 
   try {
     const booksRes = await fetch(`${API_BASE_URL}/translations/${translation}/books`);
-    const books = await booksRes.json() as Book[];
-    const bookData = books.find((b: Book) => 
+    const books = await booksRes.json();
+    const bookData = books.find((b: any) => 
       b.name.toLowerCase() === book.toLowerCase() || 
       String(b.id) === book
     );
@@ -70,9 +40,9 @@ export async function generateMetadata({
       const versesRes = await fetch(
         `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses`
       );
-      const verses = await versesRes.json() as Verse[];
+      const verses = await versesRes.json();
       
-      const verseData = verses.find((v: Verse) => v.verse === parseInt(verse));
+      const verseData = verses.find((v: any) => v.verse === parseInt(verse));
       if (verseData) {
         verseText = verseData.text || verseText;
       }
