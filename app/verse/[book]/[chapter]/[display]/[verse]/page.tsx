@@ -6,33 +6,34 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
 export async function generateMetadata({
   params,
 }: {
-  params: any;
+  params: { book: string; chapter: string; display: string; verse: string };
 }): Promise<Metadata> {
-  const resolvedParams = await Promise.resolve(params);
-  const book = resolvedParams.book;
-  const chapter = resolvedParams.chapter;
-  const display = resolvedParams.display;
-  const verse = resolvedParams.verse;
+  const { book, chapter, display, verse } = await params;
   const translation = "AKJV";
 
   let verseText = "Bible verse from In His Path.";
   let bookName = book;
 
   try {
+    // Fetching the list of books for translation
     const booksRes = await fetch(`${API_BASE_URL}/translations/${translation}/books`);
     const books = await booksRes.json();
 
+    // Find the book data by its name or ID
     const bookData = books.find((b: any) =>
       b.name.toLowerCase() === book.toLowerCase() || String(b.id) === book
     );
 
     if (bookData) {
       bookName = bookData.name;
+
+      // Fetching verses for the selected book and chapter
       const versesRes = await fetch(
         `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses`
       );
       const verses = await versesRes.json();
 
+      // Find the specific verse in the chapter
       const verseData = verses.find((v: { verse: number }) => v.verse === parseInt(verse));
       if (verseData?.text) {
         verseText = verseData.text;
@@ -69,13 +70,9 @@ export async function generateMetadata({
 export default async function VersePage({
   params,
 }: {
-  params: any;
+  params: { book: string; chapter: string; display: string; verse: string };
 }) {
-  const resolvedParams = await Promise.resolve(params);
-  const book = resolvedParams.book;
-  const chapter = resolvedParams.chapter;
-  const display = resolvedParams.display;
-  const verse = resolvedParams.verse;
+  const { book, chapter, display, verse } = await params;
   const translation = "AKJV";
 
   const query = new URLSearchParams({
