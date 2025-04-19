@@ -14,6 +14,7 @@ interface Note {
   text: string;
   category: string;
   createdAt: number;
+  userNote?: string; // Optional user-provided note
 }
 
 interface Highlight {
@@ -496,6 +497,12 @@ export default function NotesPage() {
                       <div className={`font-primary text-[var(--primary-black)] my-[8px]`}>
                         {note.text}
                       </div>
+                      
+                      {note.userNote && (
+                        <div className="font-primary text-[var(--primary-gray)] bg-[#f9f7f4] p-3 mt-3 mb-1 rounded-[8px] border border-[#F1ECE5] italic text-sm">
+                          <span className="text-[#684242] font-medium">Your note:</span> {note.userNote}
+                        </div>
+                      )}
                       
                       <div className="flex justify-between items-center mt-3 pt-2 border-t border-[#F1ECE5] pt-[6px]">
                         <Link
