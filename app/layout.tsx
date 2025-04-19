@@ -14,8 +14,13 @@ import {
 } from "../lib/fonts";
 import MobileBlocker from "./components/MobileBlocker";
 
+// Default metadata that can be overridden by individual pages
 export const metadata: Metadata = {
-  title: "In His Path",
+  metadataBase: new URL("https://beta.inhispath.com"),
+  title: {
+    template: "%s | In His Path",
+    default: "In His Path"
+  },
   description: "Be among the first to join our community, and help shape the future of In His Path.",
   icons: {
     icon: [
