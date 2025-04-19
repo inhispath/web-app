@@ -1,19 +1,31 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 // Define API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
-// Ensure metadata is generated dynamically
+// Force dynamic rendering and disable caching
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
-export async function generateMetadata({
-  params
-}: {
+// Tell Next.js to use the generateMetadata function
+export const generateMetadataExperimental = true;
+
+export async function generateMetadata(props: {
   params: any
 }): Promise<Metadata> {
-  const { book, chapter, verse } = params;
+  // Access headers to ensure dynamic rendering
+  headers();
+  
+  // Access params directly without destructuring
+  const book = props.params.book;
+  const chapter = props.params.chapter;
+  const verse = props.params.verse;
   const translation = "AKJV"; // Fixed translation
+
+  console.log(`Generating metadata for verse: ${book} ${chapter}:${verse}`);
 
   let verseText = "Bible verse from In His Path.";
   let bookName = book;
@@ -21,9 +33,16 @@ export async function generateMetadata({
   try {
     // Fetch books to get the book name
     const booksRes = await fetch(`${API_BASE_URL}/translations/${translation}/books`, { 
-      cache: 'no-store'
+      cache: 'no-store',
+      next: { revalidate: 0 }
     });
+    
+    if (!booksRes.ok) {
+      throw new Error(`Failed to fetch books: ${booksRes.status}`);
+    }
+    
     const books = await booksRes.json();
+    console.log(`Found ${books.length} books`);
     
     const bookData = books.find((b: any) => 
       String(b.id) === book || 
@@ -32,27 +51,44 @@ export async function generateMetadata({
     
     if (bookData) {
       bookName = bookData.name;
+      console.log(`Found book: ${bookName}`);
       
       // Fetch verses for the chapter
       const versesRes = await fetch(
         `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses`, 
-        { cache: 'no-store' }
+        { 
+          cache: 'no-store',
+          next: { revalidate: 0 }
+        }
       );
+      
+      if (!versesRes.ok) {
+        throw new Error(`Failed to fetch verses: ${versesRes.status}`);
+      }
+      
       const verses = await versesRes.json();
+      console.log(`Found ${verses.length} verses in chapter ${chapter}`);
       
       // Find the specific verse
       const verseData = verses.find((v: { verse: number }) => v.verse === parseInt(verse));
       if (verseData?.text) {
         verseText = verseData.text;
+        console.log(`Found verse text: ${verseText.substring(0, 30)}...`);
+      } else {
+        console.log(`Verse ${verse} not found`);
       }
+    } else {
+      console.log(`Book ${book} not found`);
     }
   } catch (error) {
     console.error("Failed to fetch verse text for metadata:", error);
   }
 
   const title = `${bookName} ${chapter}:${verse} | In His Path`;
+  console.log(`Generated metadata title: ${title}`);
   
-  return {
+  // Construct the complete metadata object
+  const metadata: Metadata = {
     title,
     description: verseText,
     openGraph: {
@@ -79,6 +115,9 @@ export async function generateMetadata({
       ],
     },
   };
+  
+  console.log("Returning verse metadata");
+  return metadata;
 }
 
 export default function VersePage({
@@ -86,13 +125,13 @@ export default function VersePage({
 }: {
   params: any
 }) {
-  const { book, chapter, verse } = params;
-  
   // Create the redirect URL with query parameters
   const query = new URLSearchParams({
-    book,
-    chapter,
-    verse,
+    book: params.book,
+    chapter: params.chapter,
+    verse: params.verse,
+    translation: "AKJV",
+    display: "1" // Default display mode
   });
 
   // Redirect to home page with the verse parameters
