@@ -1,21 +1,23 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
-// Define API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
-type Props = {
-  params: {
-    book: string;
-    chapter: string;
-    display: string;
-  };
-  searchParams: {
-    verse?: string;
-    translation?: string;
-  };
+type Params = {
+  book: string;
+  chapter: string;
+  display: string;
 };
 
+type SearchParams = {
+  verse?: string;
+  translation?: string;
+};
+
+type Props = {
+  params: Params;
+  searchParams: SearchParams;
+};
 
 export async function generateMetadata(
   { params, searchParams }: Props
@@ -82,7 +84,10 @@ export async function generateMetadata(
   };
 }
 
-export default function Page({ params, searchParams }: Props) {
+export default function Page({ params, searchParams }: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { book, chapter, display } = params;
   const verse = searchParams.verse;
   const translation = searchParams.translation || "AKJV";
