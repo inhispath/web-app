@@ -51,23 +51,18 @@ export async function generateMetadata({
     if (bookData) {
       bookName = bookData.name;
       
-      // Fetch verses for the chapter
-      const versesRes = await fetch(
-        `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses`, 
+      // Fetch the specific verse directly instead of all verses
+      const verseRes = await fetch(
+        `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses/${verse}`, 
         { cache: 'no-store' }
       );
       
-      if (!versesRes.ok) {
-        throw new Error(`Failed to fetch verses: ${versesRes.status}`);
-      }
-      
-      const verses = await versesRes.json();
-      
-      // Find the specific verse
-      const verseData = verses.find((v: { verse: number }) => v.verse === parseInt(verse));
-      if (verseData?.text) {
-        verseText = verseData.text;
-        console.log(`Found verse text: ${verseText}`);
+      if (verseRes.ok) {
+        const verseData = await verseRes.json();
+        if (verseData?.text) {
+          verseText = verseData.text;
+          console.log(`Found verse text: ${verseText}`);
+        }
       }
     }
   } catch (error) {
@@ -145,15 +140,14 @@ export default async function VersePage({
       if (bookData) {
         bookName = bookData.name;
         
-        // Fetch verses for the chapter
-        const versesRes = await fetch(
-          `${API_BASE_URL}/translations/AKJV/books/${bookData.id}/chapters/${chapter}/verses`, 
+        // Fetch the specific verse directly
+        const verseRes = await fetch(
+          `${API_BASE_URL}/translations/AKJV/books/${bookData.id}/chapters/${chapter}/verses/${verse}`, 
           { cache: 'no-store' }
         );
         
-        if (versesRes.ok) {
-          const verses = await versesRes.json();
-          const verseData = verses.find((v: { verse: number }) => v.verse === parseInt(verse));
+        if (verseRes.ok) {
+          const verseData = await verseRes.json();
           if (verseData?.text) {
             verseText = verseData.text;
           }
