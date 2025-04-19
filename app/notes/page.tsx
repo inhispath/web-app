@@ -11,6 +11,7 @@ interface Note {
   bookName: string;
   chapter: number;
   verse: number | null;
+  verseEnd?: number | null; // Add verseEnd field to support verse ranges
   text: string;
   category: string;
   createdAt: number;
@@ -39,6 +40,8 @@ export default function NotesPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [newCategory, setNewCategory] = useState<string>('');
   const [categoryToEdit, setCategoryToEdit] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editedNoteContent, setEditedNoteContent] = useState('');
   
   // Default categories that will always be available
   const DEFAULT_CATEGORIES = ['General', 'Prayer', 'Study', 'Question', 'Insight'];
@@ -232,6 +235,36 @@ export default function NotesPage() {
     if (filterCategory === categoryName) {
       setFilterCategory(null);
     }
+  };
+
+  // Add function to handle starting edit mode
+  const handleStartEditing = (note: Note) => {
+    setEditingNoteId(note.id);
+    setEditedNoteContent(note.userNote || '');
+  };
+
+  // Add function to save edited note
+  const handleSaveEditedNote = (noteId: string) => {
+    const updatedNotes = notes.map(note => {
+      if (note.id === noteId) {
+        return {
+          ...note,
+          userNote: editedNoteContent.trim() === '' ? undefined : editedNoteContent.trim()
+        };
+      }
+      return note;
+    });
+    
+    setNotes(updatedNotes);
+    localStorage.setItem('notes', JSON.stringify(updatedNotes));
+    setEditingNoteId(null);
+    setEditedNoteContent('');
+  };
+
+  // Add function to cancel editing
+  const handleCancelEditing = () => {
+    setEditingNoteId(null);
+    setEditedNoteContent('');
   };
 
   return (
@@ -474,7 +507,7 @@ export default function NotesPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
-                      layout
+                      layout="position"
                       transition={{ 
                         duration: 0.3,
                         delay: index * 0.05,
@@ -486,7 +519,12 @@ export default function NotesPage() {
                       <div>
                         <div className="flex justify-between items-start">
                           <div className="font-primary font-medium text-[var(--primary-black)]">
-                            {note.bookName} {note.chapter}{note.verse ? `:${note.verse}` : ''}
+                            {note.bookName} {note.chapter}
+                            {note.verse ? 
+                              note.verseEnd && note.verseEnd !== note.verse ? 
+                                `:${note.verse}-${note.verseEnd}` : 
+                                `:${note.verse}` 
+                              : ''}
                           </div>
                           <div className="text-sm text-[var(--primary-gray)]">
                             {formatDate(note.createdAt)} {' · '} {note.category}
@@ -499,9 +537,39 @@ export default function NotesPage() {
                       </div>
                       
                       {note.userNote && (
-                        <div className="font-primary text-[var(--primary-gray)] bg-[#f9f7f4] p-3 mt-3 mb-1 rounded-[8px] border border-[#F1ECE5] italic text-sm">
-                          <span className="text-[#684242] font-medium">Your note:</span> {note.userNote}
-                        </div>
+                        <motion.div layout={false}>
+                          {editingNoteId === note.id ? (
+                            <div className="mt-3 mb-1">
+                              <textarea
+                                className="w-full p-[10px] box-border min-h-[80px] bg-[#f9f7f4] border border-[#F1ECE5] rounded-[8px] text-sm font-primary resize-none focus:outline-none text-[var(--primary-black)] placeholder:text-[var(--primary-gray)]"
+                                value={editedNoteContent}
+                                onChange={(e) => setEditedNoteContent(e.target.value)}
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-[6px] mt-[6px] mb-[12px]">
+                                <button
+                                  className="px-[10px] py-[6px] h-[32px] rounded-[8px] text-sm bg-transparent text-[var(--primary-gray)] hover:bg-[#f0ece6] border border-[#F1ECE5] font-primary transition-all duration-200 flex items-center justify-center"
+                                  onClick={handleCancelEditing}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  className="px-[10px] py-[6px] h-[32px] rounded-[8px] text-sm bg-[#684242] text-white hover:opacity-90 border border-[#684242] font-primary transition-all duration-200 flex items-center justify-center"
+                                  onClick={() => handleSaveEditedNote(note.id)}
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div 
+                              className="font-primary text-[var(--primary-gray)] bg-[#f9f7f4] p-[6px] mt-3 mb-1 rounded-[8px] border border-[#F1ECE5] italic text-[15px] cursor-pointer hover:bg-[#f5f1eb] transition-colors duration-200"
+                              onClick={() => handleStartEditing(note)}
+                            >
+                              {note.userNote}
+                            </div>
+                          )}
+                        </motion.div>
                       )}
                       
                       <div className="flex justify-between items-center mt-3 pt-2 border-t border-[#F1ECE5] pt-[6px]">

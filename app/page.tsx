@@ -110,6 +110,7 @@ interface Note {
   bookName: string;
   chapter: number;
   verse: number | null;
+  verseEnd?: number | null;
   text: string;
   category: string;
   createdAt: number;
@@ -186,6 +187,11 @@ function HomeContent() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [openOldTestament, setOpenOldTestament] = useState(false);
   const [openNewTestament, setOpenNewTestament] = useState(false);
+  const [selectedVerseRange, setSelectedVerseRange] = useState<{start: number, end: number} | null>(null);
+  // Add new state variables for tracking menu dragging
+  const [isDraggingMenu, setIsDraggingMenu] = useState(false);
+  const [menuOffset, setMenuOffset] = useState({ x: 0, y: 0 });
+  const menuDragStartPos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     async function fetchTranslationsAndBooks() {
@@ -1403,6 +1409,9 @@ function HomeContent() {
       y: e.clientY,
       verse: verse
     });
+    
+    // Set selected verse range if we only have a single verse
+    setSelectedVerseRange({start: verse, end: verse});
   };
   
   // Handle normal click on verse to show context menu
@@ -1416,26 +1425,31 @@ function HomeContent() {
       y: e.clientY,
       verse: verse
     });
+    
+    // Set selected verse range if we only have a single verse
+    setSelectedVerseRange({start: verse, end: verse});
   };
   
   // Close context menu
   const closeContextMenu = () => {
     setContextMenu(null);
     setCustomNoteText(''); // Reset custom note text when closing context menu
+    setMenuOffset({ x: 0, y: 0 }); // Reset menu position
   };
   
   // Save a note
   const handleSaveNote = (text: string, category: string) => {
-    if (!selectedBookId || !selectedChapter || !contextMenu) return;
+    if (!selectedBookId || !selectedChapter || !contextMenu || !selectedVerseRange) return;
     
-    // Create a new note
+    // Create a new note - now with potential range of verses
     const newNote: Note = {
       id: `note-${Date.now()}`,
       bookId: selectedBookId,
       bookName: books.find(b => b.id === selectedBookId)?.name || '',
       chapter: selectedChapter,
-      verse: contextMenu.verse,
-      text,
+      verse: selectedVerseRange.start,  // Store the starting verse number
+      verseEnd: selectedVerseRange.end === selectedVerseRange.start ? null : selectedVerseRange.end,  // Only store end if it's a range
+      text: getVerseRangeText(),  // Get combined text from all selected verses
       category,
       createdAt: Date.now(),
       userNote: customNoteText.trim() || undefined // Only include if not empty
@@ -1673,6 +1687,260 @@ function HomeContent() {
     
     return note?.userNote || '';
   };
+
+  // Update the useEffect for text selection to use mouse position
+  useEffect(() => {
+    // Track mouse position
+    let mouseX = 0;
+    let mouseY = 0;
+    
+    // Create a dedicated function for the mouseup event
+    function handleMouseUp(e: MouseEvent) {
+      // Save mouse position
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      
+      // Use setTimeout to ensure the selection is complete
+      setTimeout(() => {
+        // Pass mouse coordinates to the text selection handler
+        handleTextSelection(mouseX, mouseY);
+      }, 10);
+    }
+    
+    // Add the event listener
+    const mainContent = document.getElementById('center-section');
+    if (mainContent) {
+      mainContent.addEventListener('mouseup', handleMouseUp);
+    } else {
+      // Fallback to document if center-section isn't found
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    // Clean up function
+    return () => {
+      if (mainContent) {
+        mainContent.removeEventListener('mouseup', handleMouseUp);
+      } else {
+        document.removeEventListener('mouseup', handleMouseUp);
+      }
+    };
+  }, []); // Empty dependency array to ensure this only runs once
+
+  // Update the handleTextSelection function to accept mouse coordinates
+  const handleTextSelection = (mouseX?: number, mouseY?: number) => {
+    // Get the current selection
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    // Make sure we have some text selected
+    const selectedText = selection.toString().trim();
+    if (selectedText === '') return;
+    
+    // Get the range and its boundary points
+    const range = selection.getRangeAt(0);
+    
+    // Find all verse related elements within the selection
+    const startContainer = range.startContainer.parentElement;
+    const endContainer = range.endContainer.parentElement;
+    
+    // Get verse data from the start and end elements
+    let startVerse: number | null = null;
+    let endVerse: number | null = null;
+    
+    // First check if the elements themselves have data-verse attributes
+    if (startContainer && startContainer.dataset && startContainer.dataset.verse) {
+      startVerse = parseInt(startContainer.dataset.verse);
+    }
+    
+    if (endContainer && endContainer.dataset && endContainer.dataset.verse) {
+      endVerse = parseInt(endContainer.dataset.verse);
+    }
+    
+    // If not, recursively search for elements with verse data
+    if (startVerse === null) {
+      // Try to find closest verse element or parent with verse data
+      let element: HTMLElement | null = startContainer;
+      while (element && !startVerse) {
+        // Check for data-verse attribute
+        if (element.dataset && element.dataset.verse) {
+          startVerse = parseInt(element.dataset.verse);
+          break;
+        }
+        
+        // Check for id starting with "verse-"
+        if (element.id && element.id.startsWith('verse-')) {
+          startVerse = parseInt(element.id.replace('verse-', ''));
+          break;
+        }
+        
+        // Move up to parent element
+        element = element.parentElement;
+        
+        // If we've gone too far up the tree, break
+        if (!element || element.tagName === 'BODY') break;
+      }
+      
+      // If still not found, use a different approach to scan nearby elements
+      if (startVerse === null) {
+        const verseElements = document.querySelectorAll('[data-verse]');
+        verseElements.forEach(el => {
+          if (selection.containsNode(el, true)) {
+            const verseNum = parseInt((el as HTMLElement).dataset.verse || '');
+            if (!isNaN(verseNum)) {
+              if (startVerse === null || verseNum < startVerse) {
+                startVerse = verseNum;
+              }
+            }
+          }
+        });
+      }
+    }
+    
+    // Do the same for end verse
+    if (endVerse === null) {
+      let element: HTMLElement | null = endContainer;
+      while (element && !endVerse) {
+        if (element.dataset && element.dataset.verse) {
+          endVerse = parseInt(element.dataset.verse);
+          break;
+        }
+        
+        if (element.id && element.id.startsWith('verse-')) {
+          endVerse = parseInt(element.id.replace('verse-', ''));
+          break;
+        }
+        
+        element = element.parentElement;
+        
+        if (!element || element.tagName === 'BODY') break;
+      }
+      
+      // If still not found, scan for elements inside the selection
+      if (endVerse === null) {
+        const verseElements = document.querySelectorAll('[data-verse]');
+        verseElements.forEach(el => {
+          if (selection.containsNode(el, true)) {
+            const verseNum = parseInt((el as HTMLElement).dataset.verse || '');
+            if (!isNaN(verseNum)) {
+              if (endVerse === null || verseNum > endVerse) {
+                endVerse = verseNum;
+              }
+            }
+          }
+        });
+      }
+    }
+    
+    // If we found at least one verse, proceed
+    if (startVerse !== null || endVerse !== null) {
+      // Handle case where only one verse number is found
+      if (startVerse === null) startVerse = endVerse as number;
+      if (endVerse === null) endVerse = startVerse as number;
+      
+      // At this point, both values should be non-null
+      // Ensure startVerse is the smaller number
+      const minVerse = Math.min(startVerse as number, endVerse as number);
+      const maxVerse = Math.max(startVerse as number, endVerse as number);
+      
+      // Only update if we actually have a verse range
+      setSelectedVerseRange({
+        start: minVerse,
+        end: maxVerse
+      });
+      
+      // Use the provided mouse coordinates or fallback to selection rect
+      let x = mouseX;
+      let y = mouseY;
+      
+      // If mouse coordinates aren't provided, use the selection rect
+      if (x === undefined || y === undefined) {
+        const rect = range.getBoundingClientRect();
+        x = rect.right;
+        y = rect.bottom;
+      }
+      
+      // Open context menu at mouse position
+      setContextMenu({
+        visible: true,
+        x: x,
+        y: y,
+        verse: minVerse // Use min verse as reference
+      });
+    }
+  };
+
+  // Add a function to get verse range text
+  const getVerseRangeText = (): string => {
+    if (!selectedVerseRange) return '';
+    
+    let combinedText = '';
+    
+    for (let i = selectedVerseRange.start; i <= selectedVerseRange.end; i++) {
+      const verse = verses.find(v => v.verse === i);
+      if (verse) {
+        combinedText += verse.text + ' ';
+      }
+    }
+    
+    return combinedText.trim();
+  };
+
+  // Add a function to get verse range description
+  const getVerseRangeDescription = (): string => {
+    if (!selectedVerseRange || !selectedBookId) return '';
+    
+    const bookName = books.find(b => b.id === selectedBookId)?.name || '';
+    
+    if (selectedVerseRange.start === selectedVerseRange.end) {
+      return `${bookName} ${selectedChapter}:${selectedVerseRange.start}`;
+    } else {
+      return `${bookName} ${selectedChapter}:${selectedVerseRange.start}-${selectedVerseRange.end}`;
+    }
+  };
+
+  // Add function to handle starting context menu drag
+  const handleMenuDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingMenu(true);
+    menuDragStartPos.current = {
+      x: e.clientX - menuOffset.x,
+      y: e.clientY - menuOffset.y
+    };
+  };
+
+  // Add function to handle context menu dragging
+  const handleMenuDrag = (e: MouseEvent) => {
+    if (!isDraggingMenu) return;
+    
+    const newOffsetX = e.clientX - menuDragStartPos.current.x;
+    const newOffsetY = e.clientY - menuDragStartPos.current.y;
+    
+    setMenuOffset({
+      x: newOffsetX,
+      y: newOffsetY
+    });
+  };
+
+  // Add function to handle ending context menu drag
+  const handleMenuDragEnd = () => {
+    setIsDraggingMenu(false);
+  };
+
+  // Add useEffect to handle mouse events for menu dragging
+  useEffect(() => {
+    if (isDraggingMenu) {
+      document.addEventListener('mousemove', handleMenuDrag);
+      document.addEventListener('mouseup', handleMenuDragEnd);
+    } else {
+      document.removeEventListener('mousemove', handleMenuDrag);
+      document.removeEventListener('mouseup', handleMenuDragEnd);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMenuDrag);
+      document.removeEventListener('mouseup', handleMenuDragEnd);
+    };
+  }, [isDraggingMenu]);
 
   return (
     <main className="min-h-screen h-full bg-[var(--background)] text-black p-[0px] m-[0px]">
@@ -2646,15 +2914,28 @@ function HomeContent() {
           id="verse-context-menu"
           className="fixed bg-[var(--foreground)] rounded-[12px] shadow-[0_0_14px_0_rgba(108,103,97,0.06)] border border-[var(--border)] p-[8px] z-50 max-w-[350px]"
           style={{
-            top: `${contextMenu.y}px`,
-            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y + menuOffset.y}px`,
+            left: `${contextMenu.x + menuOffset.x}px`,
+            cursor: isDraggingMenu ? 'grabbing' : 'auto'
           }}
         >
-          <div className="font-primary font-medium text-[var(--primary-black)] mb-[6px] text-[15px]">
-            Verse {contextMenu.verse}
+          {/* Draggable handle */}
+          <div 
+            className="h-[6px] w-full mb-[8px] flex justify-center items-center cursor-grab active:cursor-grabbing"
+            onMouseDown={handleMenuDragStart}
+          >
+            <div className="w-[30px] h-[3px] bg-[#E5E0D8] rounded-full"></div>
           </div>
-          <div className="text-[13px] mb-[12px] italic text-[var(--primary-gray)] text-ellipsis font-primary">
-            {getVerseText(contextMenu.verse)}
+          
+          <div className="font-primary font-medium text-[var(--primary-black)] mb-[6px] text-[15px]">
+            {selectedVerseRange?.start === selectedVerseRange?.end
+              ? `Verse ${contextMenu.verse}`
+              : getVerseRangeDescription()}
+          </div>
+          <div className="text-[13px] mb-[12px] italic text-[var(--primary-gray)] text-ellipsis font-primary line-clamp-5 max-h-[120px] overflow-hidden">
+            {selectedVerseRange?.start === selectedVerseRange?.end
+              ? getVerseText(contextMenu.verse)
+              : getVerseRangeText()}
           </div>
           {/* Custom note input field */}
           <div className="mb-[12px] w-full">
@@ -2673,7 +2954,12 @@ function HomeContent() {
               <button
                 key={category}
                 className="w-full text-left py-[6px] px-[8px] text-sm hover:bg-[#f0ece6] bg-transparent border-none transition-colors duration-200 font-primary text-[var(--primary-black)]"
-                onClick={() => handleSaveNote(getVerseText(contextMenu.verse), category)}
+                onClick={() => handleSaveNote(
+                  selectedVerseRange?.start === selectedVerseRange?.end
+                    ? getVerseText(contextMenu.verse)
+                    : getVerseRangeText(),
+                  category
+                )}
               >
                 Add to {category}
               </button>
