@@ -29,6 +29,7 @@ export async function generateMetadata({
 
   let verseText = "Bible verse from In His Path.";
   let bookName = "Bible";
+  let quoteImageUrl = `https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg`;
   
   try {
     // Fetch books to get the book name
@@ -64,6 +65,9 @@ export async function generateMetadata({
           console.log(`Found verse text: ${verseText}`);
         }
       }
+      
+      // Set the dynamically generated quote image URL
+      quoteImageUrl = `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses/${verse}/quote-image`;
     }
   } catch (error) {
     console.error("Failed to fetch verse text for metadata:", error);
@@ -84,10 +88,10 @@ export async function generateMetadata({
       siteName: "In His Path",
       images: [
         {
-          url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg",
-          width: 960,
-          height: 436,
-          alt: "Creation of Adam by Michelangelo",
+          url: quoteImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${bookName} ${chapter}:${verse} - ${verseText}`,
         },
       ],
     },
@@ -95,9 +99,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description: verseText,
-      images: [
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg",
-      ],
+      images: [quoteImageUrl],
     },
   };
 }
@@ -126,6 +128,7 @@ export default async function VersePage({
   // Fetch verse content for display
   let verseText = "Loading verse...";
   let bookName = "Bible";
+  let quoteImageUrl = `https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg`;
   
   try {
     // Fetch books to get the book name
@@ -152,6 +155,9 @@ export default async function VersePage({
             verseText = verseData.text;
           }
         }
+        
+        // Set the dynamically generated quote image URL
+        quoteImageUrl = `${API_BASE_URL}/translations/AKJV/books/${bookData.id}/chapters/${chapter}/verses/${verse}/quote-image`;
       }
     }
   } catch (error) {
@@ -164,7 +170,7 @@ export default async function VersePage({
       <head>
         <meta property="og:title" content={`${bookName} ${chapter}:${verse} | In His Path`} />
         <meta property="og:description" content={verseText} />
-        <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg" />
+        <meta property="og:image" content={quoteImageUrl} />
         <meta property="og:url" content={`https://beta.inhispath.com/verse/${book}/${chapter}/${verse}`} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="In His Path" />
@@ -172,7 +178,7 @@ export default async function VersePage({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${bookName} ${chapter}:${verse} | In His Path`} />
         <meta name="twitter:description" content={verseText} />
-        <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg" />
+        <meta name="twitter:image" content={quoteImageUrl} />
 
         <title>{`${bookName} ${chapter}:${verse} | In His Path`}</title>
         <meta name="description" content={verseText} />
@@ -195,8 +201,8 @@ export default async function VersePage({
           lineHeight: 1.6,
           color: '#333',
         }}>
-          <h1 style={{ fontSize: '24px', marginBottom: '20px' }} className="font-primary">{`${bookName} ${chapter}:${verse}`}</h1>
-          <p style={{ fontSize: '18px', marginBottom: '30px', fontStyle: 'italic', maxWidth: '800px' }} className="font-primary">{verseText}</p>
+          <h1 style={{ fontSize: '24px', marginBottom: '20px' }} className="font-primary text-[#333]">{`${bookName} ${chapter}:${verse}`}</h1>
+          <p style={{ fontSize: '18px', marginBottom: '30px', fontStyle: 'italic', maxWidth: '800px' }} className="font-primary text-[#333]">{verseText}</p>
           <a href={redirectUrl} style={{
             display: 'inline-block',
             background: '#684242',
