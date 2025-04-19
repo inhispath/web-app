@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
-// Define API base URL - using the same one as in the main app
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+// API URL (set in .env or fallback to localhost)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+// Define props for the dynamic route
 type Params = {
   book: string;
   chapter: string;
@@ -15,9 +16,7 @@ type SearchParams = {
   translation?: string;
 };
 
-/**
- * Generate metadata for social media embeds with verse content
- */
+// Generate meta tags for the route (SSR)
 export async function generateMetadata(
   { params, searchParams }: { params: Params; searchParams: SearchParams }
 ): Promise<Metadata> {
@@ -25,37 +24,35 @@ export async function generateMetadata(
   const verse = searchParams.verse || "1";
   const translation = searchParams.translation || "AKJV";
 
-  let verseText = "Bible verse from In His Path.";
   let bookName = book;
-  
+  let verseText = "Bible verse from In His Path.";
+
   try {
-    // Fetch books to get the proper book ID and name
     const booksRes = await fetch(`${API_BASE_URL}/translations/${translation}/books`);
     const books = await booksRes.json();
-    const bookData = books.find((b: any) => 
-      b.name.toLowerCase() === book.toLowerCase() || 
-      String(b.id) === book
+    const bookData = books.find((b: any) =>
+      b.name.toLowerCase() === book.toLowerCase() || String(b.id) === book
     );
-    
+
     if (bookData) {
       bookName = bookData.name;
-      // Fetch all verses from the chapter
       const versesRes = await fetch(
         `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses`
       );
       const verses = await versesRes.json();
-      
-      // Find the specific verse
+
       const verseData = verses.find((v: { verse: number }) => v.verse === parseInt(verse));
-      if (verseData) {
-        verseText = verseData.text || verseText;
+      if (verseData?.text) {
+        verseText = verseData.text;
       }
     }
-  } catch (error) {
-    console.error("Failed to fetch verse text for metadata:", error);
+  } catch (err) {
+    console.error("Failed to fetch verse text:", err);
   }
 
   const title = `${bookName} ${chapter}:${verse} (${translation}) | In His Path`;
+  const url = `https://beta.inhispath.com/verse/${book}/${chapter}/${display}?verse=${verse}&translation=${translation}`;
+  const image = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg";
 
   return {
     title,
@@ -64,10 +61,10 @@ export async function generateMetadata(
       title,
       description: verseText,
       type: "website",
-      url: `https://beta.inhispath.com/verse/${book}/${chapter}/${display}${verse ? `?verse=${verse}` : ''}${translation ? `&translation=${translation}` : ''}`,
+      url,
       images: [
         {
-          url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg",
+          url: image,
           width: 960,
           height: 436,
           alt: "Creation of Adam by Michelangelo",
@@ -78,28 +75,23 @@ export async function generateMetadata(
       card: "summary_large_image",
       title,
       description: verseText,
-      images: [
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg",
-      ],
+      images: [image],
     },
   };
 }
 
-/**
- * Default page function that redirects to the home page with the proper parameters
- */
-export default function VersePage({ 
-  params, 
-  searchParams 
-}: { 
-  params: Params; 
+// SSR page that redirects to main reader
+export default function Page({
+  params,
+  searchParams,
+}: {
+  params: Params;
   searchParams: SearchParams;
 }) {
   const { book, chapter, display } = params;
   const verse = searchParams.verse;
   const translation = searchParams.translation || "AKJV";
 
-  // Build the query parameters for redirection
   const query = new URLSearchParams({
     book,
     chapter,
@@ -108,6 +100,5 @@ export default function VersePage({
     ...(verse && { verse }),
   });
 
-  // Redirect to the home page with the parameters
   redirect(`/?${query.toString()}`);
-} 
+}
