@@ -10,11 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({
   params
 }: {
-  params: {
-    book: string;
-    chapter: string;
-    verse: string;
-  }
+  params: any
 }): Promise<Metadata> {
   const { book, chapter, verse } = params;
   const translation = "AKJV"; // Fixed translation
@@ -88,11 +84,7 @@ export async function generateMetadata({
 export default function VersePage({
   params
 }: {
-  params: {
-    book: string;
-    chapter: string;
-    verse: string;
-  }
+  params: any
 }) {
   const { book, chapter, verse } = params;
   
