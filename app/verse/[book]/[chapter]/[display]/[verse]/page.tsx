@@ -7,7 +7,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
 export async function generateMetadata({
   params,
 }: {
-  params: { book: string; chapter: string; display: string; verse: string };
+  params: any;
 }): Promise<Metadata> {
   const { book, chapter, display, verse } = await params;  // Await the params here
   const translation = "AKJV";
@@ -68,7 +68,7 @@ export async function generateMetadata({
 export default async function VersePage({
   params,
 }: {
-  params: { book: string; chapter: string; display: string; verse: string };
+  params: any;
 }) {
   const { book, chapter, display, verse } = await params;  // Await the params here
   const translation = "AKJV";
