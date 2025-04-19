@@ -3,16 +3,13 @@ import type { Metadata } from "next";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+// Awaited params in generateMetadata
 export async function generateMetadata({
   params,
 }: {
-  params: any;
+  params: { book: string; chapter: string; display: string; verse: string };
 }): Promise<Metadata> {
-  const resolvedParams = await Promise.resolve(params);
-  const book = resolvedParams.book;
-  const chapter = resolvedParams.chapter;
-  const display = resolvedParams.display;
-  const verse = resolvedParams.verse;
+  const { book, chapter, display, verse } = await params;  // Await the params here
   const translation = "AKJV";
 
   let verseText = "Bible verse from In His Path.";
@@ -28,6 +25,7 @@ export async function generateMetadata({
 
     if (bookData) {
       bookName = bookData.name;
+
       const versesRes = await fetch(
         `${API_BASE_URL}/translations/${translation}/books/${bookData.id}/chapters/${chapter}/verses`
       );
@@ -66,16 +64,13 @@ export async function generateMetadata({
   };
 }
 
+// Awaited params in VersePage
 export default async function VersePage({
   params,
 }: {
-  params: any;
+  params: { book: string; chapter: string; display: string; verse: string };
 }) {
-  const resolvedParams = await Promise.resolve(params);
-  const book = resolvedParams.book;
-  const chapter = resolvedParams.chapter;
-  const display = resolvedParams.display;
-  const verse = resolvedParams.verse;
+  const { book, chapter, display, verse } = await params;  // Await the params here
   const translation = "AKJV";
 
   const query = new URLSearchParams({
