@@ -69,12 +69,7 @@ export async function generateMetadata({
 export default async function VersePage({
   params,
 }: {
-  params: {
-    book: string;
-    chapter: string;
-    display: string;
-    verse: string;
-  };
+  params: any;
 }) {
   const resolvedParams = await Promise.resolve(params);
   const book = resolvedParams.book;
