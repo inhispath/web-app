@@ -13,7 +13,11 @@ export async function generateMetadata({
     verse: string;
   };
 }): Promise<Metadata> {
-  const { book, chapter, display, verse } = await params;
+  const resolvedParams = await Promise.resolve(params);
+  const book = resolvedParams.book;
+  const chapter = resolvedParams.chapter;
+  const display = resolvedParams.display;
+  const verse = resolvedParams.verse;
   const translation = "AKJV";
 
   let verseText = "Bible verse from In His Path.";
@@ -77,7 +81,11 @@ export default async function VersePage({
     verse: string;
   };
 }) {
-  const { book, chapter, display, verse } = await params;
+  const resolvedParams = await Promise.resolve(params);
+  const book = resolvedParams.book;
+  const chapter = resolvedParams.chapter;
+  const display = resolvedParams.display;
+  const verse = resolvedParams.verse;
   const translation = "AKJV";
 
   const query = new URLSearchParams({
