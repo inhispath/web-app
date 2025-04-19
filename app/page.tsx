@@ -1578,10 +1578,8 @@ function HomeContent() {
     const baseUrl = window.location.origin;
     const bookName = books.find(b => b.id === selectedBookId)?.name || '';
     const verseParam = shareVerse ? `&verse=${shareVerse}` : '';
-    const translationParam = `&translation=${selectedTranslationShort}`;
-    const displayModeParam = `&display=${displayMode}`;
     
-    return `${baseUrl}?book=${selectedBookId}&chapter=${selectedChapter}${verseParam}${translationParam}${displayModeParam}`;
+    return `${baseUrl}?book=${selectedBookId}&chapter=${selectedChapter}${verseParam}`;
   };
   
   // Function to copy the URL to clipboard
@@ -2260,57 +2258,6 @@ function HomeContent() {
                   <div className="flex flex-col gap-[12px]">
                     {selectedBookId && selectedChapter ? (
                       <>
-                        <div className="flex gap-6 px-4 py-3 shadow-[0_0_14px_0_rgba(108,103,97,0.06)] rounded-[12px] border border-[#F1ECE5] shadow-sm">
-                          {/* Display Mode Buttons */}
-                          <div className="flex items-center gap-6">
-                            {/* Align Left */}
-                            <button
-                              onClick={() => handleDisplayModeChange(1)}
-                              className={`w-[36px] h-[36px] border-none flex items-center justify-center transition rounded-full cursor-pointer ${
-                                displayMode === 1 ? "bg-transparent" : "bg-transparent"
-                              }`}
-                              aria-label="Align Left"
-                            >
-                              <svg width="20" height="20" fill="none" stroke={displayMode === 1 ? "#684242" : "#BBA8A8"} strokeWidth="2" viewBox="0 0 24 24">
-                                <path d="M4 6h8M4 12h16M4 18h12" />
-                              </svg>
-                            </button>
-
-                            {/* Align Center */}
-                            <button
-                              onClick={() => handleDisplayModeChange(2)}
-                              className={`w-[36px] h-[36px] border-none flex items-center justify-center transition rounded-full cursor-pointer ${
-                                displayMode === 2 ? "bg-transparent" : "bg-transparent"
-                              }`}
-                              aria-label="Align Center"
-                            >
-                              <svg width="20" height="20" fill="none" stroke={displayMode === 2 ? "#684242" : "#BBA8A8"} strokeWidth="2" viewBox="0 0 24 24">
-                                <path d="M6 6h12M4 12h16M6 18h12" />
-                              </svg>
-                            </button>
-
-                            {/* Grid View */}
-                            <button
-                              onClick={() => handleDisplayModeChange(3)}
-                              className={`w-[36px] h-[36px] border-none flex items-center justify-center transition rounded-full cursor-pointer ${
-                                displayMode === 3 ? "bg-transparent" : "bg-transparent"
-                              }`}
-                              aria-label="Grid View"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                                <rect x="8" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                                <rect y="4" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                                <rect x="8" y="4" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                                <rect y="8" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                                <rect x="8" y="8" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                                <rect y="12" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                                <rect x="8" y="12" width="6" height="2" rx="1" fill={displayMode === 3 ? "#684242" : "#BBA8A8"} />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-
                         {/* Verse Selector */}
                         <div className="mt-2">
                           <div className="font-primary text-[var(--primary-black)] mb-[6px]">
