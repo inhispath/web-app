@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function MobileBlocker({ children }: { children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsClient(true);
@@ -28,6 +30,11 @@ export default function MobileBlocker({ children }: { children: React.ReactNode 
     return <>{children}</>;
   }
 
+  // Skip mobile check for verse pages
+  if (pathname.startsWith('/verse')) {
+    return <>{children}</>;
+  }
+
   if (isMobile) {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-screen p-6 bg-[var(--background)] text-[var(--primary-black)]">
@@ -48,4 +55,4 @@ export default function MobileBlocker({ children }: { children: React.ReactNode 
   }
 
   return <>{children}</>;
-} 
+}
