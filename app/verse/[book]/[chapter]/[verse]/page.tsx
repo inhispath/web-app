@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import Script from "next/script";
 
 // Define API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -106,6 +107,7 @@ export async function generateMetadata({
   };
 }
 
+// This component actually renders content rather than immediately redirecting
 export default async function VersePage({
   params
 }: {
@@ -124,7 +126,94 @@ export default async function VersePage({
     verse,
     translation: "AKJV"
   });
+  
+  const redirectUrl = `/?${query.toString()}`;
+  
+  // Fetch verse content for display
+  let verseText = "Loading verse...";
+  let bookName = "Bible";
+  
+  try {
+    // Fetch books to get the book name
+    const booksRes = await fetch(`${API_BASE_URL}/translations/AKJV/books`, { 
+      cache: 'no-store'
+    });
+    
+    if (booksRes.ok) {
+      const books = await booksRes.json();
+      const bookData = books.find((b: any) => String(b.id) === book);
+      
+      if (bookData) {
+        bookName = bookData.name;
+        
+        // Fetch verses for the chapter
+        const versesRes = await fetch(
+          `${API_BASE_URL}/translations/AKJV/books/${bookData.id}/chapters/${chapter}/verses`, 
+          { cache: 'no-store' }
+        );
+        
+        if (versesRes.ok) {
+          const verses = await versesRes.json();
+          const verseData = verses.find((v: { verse: number }) => v.verse === parseInt(verse));
+          if (verseData?.text) {
+            verseText = verseData.text;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching verse:", error);
+  }
 
-  // Redirect to home page with the verse parameters
-  redirect(`/?${query.toString()}`);
+  // Render a minimal page with the verse text and auto-redirect
+  return (
+    <html>
+      <head>
+        <meta property="og:title" content={`${bookName} ${chapter}:${verse} | In His Path`} />
+        <meta property="og:description" content={verseText} />
+        <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg" />
+        <meta property="og:url" content={`https://beta.inhispath.com/verse/${book}/${chapter}/${verse}`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="In His Path" />
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${bookName} ${chapter}:${verse} | In His Path`} />
+        <meta name="twitter:description" content={verseText} />
+        <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/960px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg" />
+        
+        <title>{`${bookName} ${chapter}:${verse} | In His Path`}</title>
+        <meta name="description" content={verseText} />
+        
+        {/* Redirect after a short delay to give crawlers time to read the meta tags */}
+        <meta httpEquiv="refresh" content={`2;url=${redirectUrl}`} />
+        <script dangerouslySetInnerHTML={{ 
+          __html: `setTimeout(function() { window.location.href = '${redirectUrl}'; }, 1000);` 
+        }} />
+      </head>
+      <body style={{ 
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        maxWidth: '600px', 
+        margin: '0 auto', 
+        padding: '40px 20px',
+        textAlign: 'center',
+        lineHeight: 1.6,
+        color: '#333'
+      }}>
+        <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>{`${bookName} ${chapter}:${verse}`}</h1>
+        <p style={{ fontSize: '18px', marginBottom: '30px', fontStyle: 'italic' }}>"{verseText}"</p>
+        <p>Redirecting to Bible reading view...</p>
+        <a href={redirectUrl} style={{ 
+          display: 'inline-block',
+          background: '#684242',
+          color: 'white',
+          padding: '10px 20px',
+          borderRadius: '8px',
+          textDecoration: 'none',
+          marginTop: '20px'
+        }}>
+          Continue to In His Path
+        </a>
+      </body>
+    </html>
+  );
 } 
