@@ -205,7 +205,7 @@ function HomeContent() {
         );
   
         if (!defaultTranslation) return;
-  
+        
         const booksRes = await fetch(
           `${API_BASE_URL}/translations/${selectedTranslationShort}/books`
         );
@@ -2681,7 +2681,7 @@ function HomeContent() {
                       className={`transition-colors duration-200 
                         ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} 
                         ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}
-                        ${hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? 'border-l-4 border-l-[#684242] pl-2' : ''}
+                        ${hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? 'border-l-4 border-l-[#684242] px-[8px]' : ''}
                       `}
                       onMouseEnter={() => handleVerseHover(verse.verse)}
                       onMouseLeave={() => handleVerseHover(null)}
@@ -2689,12 +2689,20 @@ function HomeContent() {
                       onContextMenu={(e) => handleContextMenu(e, verse.verse)}
                       data-tip={getUserNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse)}
                     >
-                      <strong>{verse.verse}</strong> {verse.text}
-                      {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) && (
+                      <strong>{verse.verse} </strong>
+                      {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? (
+                        <span className="tooltip tooltip-top" data-tip={getUserNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse)}>
+                          {verse.text}
+                        </span>
+                      ) : (
+                        <>{verse.text}</>
+                      )}
+
+                      {/* {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) && (
                         <div className="tooltip tooltip-right" data-tip={getUserNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse)}>
                           <span className="ml-2 text-[#684242] text-xs cursor-help">📝</span>
                         </div>
-                      )}
+                      )} */}
                     </p>
                   ))
                 ) : displayMode === 2 ? (
@@ -2706,7 +2714,7 @@ function HomeContent() {
                           className={`mr-1 
                             ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} 
                             ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}
-                            ${hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? 'text-[#684242]' : ''}
+                            ${hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? 'border-l-4 border-l-[#684242] pl-[8px]' : ''}
                           `}
                           onMouseEnter={() => handleVerseHover(verse.verse)}
                           onMouseLeave={() => handleVerseHover(null)}
@@ -2714,11 +2722,11 @@ function HomeContent() {
                           onContextMenu={(e) => handleContextMenu(e, verse.verse)}
                         >
                           {verse.verse}{'\u00A0'}
-                          {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) && (
+                          {/* {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) && (
                             <span className="tooltip tooltip-top" data-tip={getUserNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse)}>
                               📝
                             </span>
-                          )}
+                          )} */}
                         </strong>
                         {verse.text.trim().split(" ").map((word, index) => (
                           <span 
@@ -2730,10 +2738,18 @@ function HomeContent() {
                             onClick={(e) => handleVerseClick(e, verse.verse)}
                             onContextMenu={(e) => handleContextMenu(e, verse.verse)}
                           >
-                            {word}
+                            {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? (
+                              <span className="tooltip tooltip-top" data-tip={getUserNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse)}>
+                                {word}
+                              </span>
+                            ) : (
+                              <>{word}</>
+                            )}
+
                             {'\u00A0'}
                           </span>
                         ))}
+                        
                       </React.Fragment>
                     ))}
                   </div>
@@ -2750,7 +2766,7 @@ function HomeContent() {
                               className={`mr-1 
                                 ${hoveredVerse === verse.verse ? 'bg-[#f0ece6]' : ''} 
                                 ${selectedVerse === verse.verse ? 'bg-[var(--border)]' : ''}
-                                ${hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? 'text-[#684242]' : ''}
+                                ${hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? 'border-l-4 border-l-[#684242] px-[8px]' : ''}
                               `}
                               onMouseEnter={() => handleVerseHover(verse.verse)}
                               onMouseLeave={() => handleVerseHover(null)}
@@ -2758,11 +2774,11 @@ function HomeContent() {
                               onContextMenu={(e) => handleContextMenu(e, verse.verse)}
                             >
                               {verse.verse}{'\u00A0'}
-                              {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) && (
+                              {/* {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) && (
                                 <span className="tooltip tooltip-top" data-tip={getUserNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse)}>
                                   📝
                                 </span>
-                              )}
+                              )} */}
                             </strong>
                             {verse.text.trim().split(" ").map((word, index) => (
                               <span 
@@ -2774,7 +2790,13 @@ function HomeContent() {
                                 onClick={(e) => handleVerseClick(e, verse.verse)}
                                 onContextMenu={(e) => handleContextMenu(e, verse.verse)}
                               >
-                                {word}
+                                {hasNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse) ? (
+                                  <span className="tooltip tooltip-top" data-tip={getUserNoteForVerse(selectedBookId || 0, selectedChapter || 0, verse.verse)}>
+                                    {word}
+                                  </span>
+                                ) : (
+                                  <>{word}</>
+                                )}
                                 {'\u00A0'}
                               </span>
                             ))}
