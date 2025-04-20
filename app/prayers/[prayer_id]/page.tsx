@@ -141,7 +141,7 @@ export default async function PrayerPage({
         <title>{`${prayerTitle} | In His Path`}</title>
         <meta name="description" content={prayerDescription} />
       </head>
-      <body style={{
+      <body className="bg-[var(--background)]" style={{
         fontFamily: 'system-ui, -apple-system, sans-serif',
         width: '100%',
         margin: '0',
@@ -151,7 +151,7 @@ export default async function PrayerPage({
         alignItems: 'center',
         minHeight: '100vh',
         textAlign: 'center',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}>
         <div style={{
           textAlign: 'center', 

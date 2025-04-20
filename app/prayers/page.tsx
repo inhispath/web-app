@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, Share, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -19,6 +19,7 @@ export default function PrayersPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedPrayers, setExpandedPrayers] = useState<{[id: number]: boolean}>({});
   const [focusedPrayer, setFocusedPrayer] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   // Toggle prayer expansion state
   const togglePrayerExpansion = (prayerId: number) => {
@@ -36,6 +37,14 @@ export default function PrayersPage() {
   // Reset focus to show all prayers
   const resetFocus = () => {
     setFocusedPrayer(null);
+  };
+
+  // Copy prayer URL to clipboard
+  const copyPrayerUrl = (prayerId: number) => {
+    const url = `${window.location.origin}/prayers/${prayerId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(prayerId);
+    setTimeout(() => setCopiedId(null), 1000);
   };
 
   // Fetch prayers from API
@@ -153,16 +162,41 @@ export default function PrayersPage() {
                       {prayer.text}
                     </div>
 
-                    {!focusedPrayer && (
-                      <div className="flex justify-end mt-3 pt-2">
+                    <div className="flex justify-end mt-3 pt-2">
+                      {focusedPrayer ? (
+                        <div className="flex gap-[8px]">
+                          <button
+                            onClick={() => copyPrayerUrl(prayer.id)}
+                            className="px-[12px] gap-[6px] py-[6px] rounded-[6px] border border-[var(--border)] shadow-sm font-primary shadow-[0_0_14px_0_rgba(108,103,97,0.06)] bg-[var(--foreground)] text-[var(--primary-black)] hover:bg-[#f0ece6] transition-all duration-200 flex items-center"
+                          >
+                            {copiedId === prayer.id ? (
+                              <>
+                                <Check size={16} />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Share size={16} />
+                                <span>Share</span>
+                              </>
+                            )}
+                          </button>
+                          <Link
+                            href={`/prayers/${prayer.id}`}
+                            className="px-[12px] py-[6px] no-underline text-[13px] text-[#fff] rounded-[6px] border border-[var(--border)] shadow-sm font-primary shadow-[0_0_14px_0_rgba(108,103,97,0.06)] bg-[#684242] hover:opacity-90 transition-all duration-200"
+                          >
+                            Remove Distractions
+                          </Link>
+                        </div>
+                      ) : (
                         <button
                           onClick={() => focusOnPrayer(prayer.id)}
                           className="px-[12px] py-[6px] rounded-[6px] border border-[var(--border)] shadow-sm font-primary shadow-[0_0_14px_0_rgba(108,103,97,0.06)] bg-[#684242] text-white hover:opacity-90 transition-all duration-200"
                         >
                           Read
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
