@@ -192,6 +192,10 @@ function HomeContent() {
   const [isDraggingMenu, setIsDraggingMenu] = useState(false);
   const [menuOffset, setMenuOffset] = useState({ x: 0, y: 0 });
   const menuDragStartPos = useRef({ x: 0, y: 0 });
+  const [compareTranslation, setCompareTranslation] = useState<boolean>(false);
+  const [selectedCompareTranslation, setSelectedCompareTranslation] = useState<string | null>(null);
+  const [selectedCompareTranslationShort, setSelectedCompareTranslationShort] = useState<string | null>(null);
+  const [compareData, setCompareData] = useState<any>(null);
 
   useEffect(() => {
     async function fetchTranslationsAndBooks() {
@@ -466,10 +470,35 @@ function HomeContent() {
   };
   
   // Existing translation handler - optimize it
-  const handleTranslationSelect = (translation: Translation) => {
+  const handleTranslationSelect = async (translation: Translation) => {
     // Extract the full title, removing any prefix
     const fullTitle = translation.title.replace(/^#\s*\w+:?\s*/, '');
     const shortCode = translation.translation;
+
+    if (compareTranslation) {
+      setCompareTranslation(false);
+      setSelectedCompareTranslation(fullTitle);
+      setSelectedCompareTranslationShort(shortCode);
+
+      const modal = document.getElementById('my_modal_2') as HTMLDialogElement;
+      if (modal) modal.close();
+
+      const modal2 = document.getElementById('compare_modal') as HTMLDialogElement;
+      if (modal2) modal2.showModal();
+
+      // add error handling for the request
+      try { 
+        const res = await fetch(`${API_BASE_URL}/compare?translation1=${selectedTranslationShort}&translation2=${shortCode}&book=${selectedBookId}&chapter=${selectedChapter}&verse=${selectedVerseRange?.start}`);
+        const data = await res.json();
+        
+        setCompareData(data);
+        console.log(data);
+      } catch (error) {
+        console.error('Error fetching verses:', error);
+      }
+      
+      return;
+    }
     
     // Store current chapter info before changing translation
     const currentBookId = selectedBookId;
@@ -1990,7 +2019,11 @@ function HomeContent() {
             </div>
           </div>
           <form method="dialog" className="modal-backdrop opacity-0">
-            <button>close</button>
+            <button onClick={() => {
+              setCompareTranslation(false);
+              setSelectedCompareTranslation(null);
+              setSelectedCompareTranslationShort(null);
+            }}>close</button>
           </form>
         </dialog>
 
@@ -2987,6 +3020,23 @@ function HomeContent() {
               </button>
             ))}
           </div>
+          <div className="gap-[2px] flex flex-col border border-[var(--border)] rounded-[8px] overflow-hidden mt-[12px]">
+            <button
+              className="w-full text-left py-[8px] px-[10px] text-sm hover:bg-[#f0ece6] bg-transparent border-none transition-colors duration-200 font-primary text-[var(--primary-black)]"
+              onClick={() => {
+                setCompareTranslation(true)
+
+                const modal = document.getElementById('my_modal_2') as HTMLDialogElement;
+                if (modal) {
+                  setTranslationSearchTerm("");
+                  modal.showModal();
+                }
+              }}
+            >
+              Compare Translation
+            </button>
+          </div>
+
           <button
             className="absolute top-[6px] right-[6px] bg-transparent border-none text-[var(--primary-gray)] hover:text-[var(--primary-black)] transition-colors duration-200"
             onClick={closeContextMenu}
@@ -2995,6 +3045,45 @@ function HomeContent() {
           </button>
         </div>
       )}
+
+      <dialog id="compare_modal" className="modal">
+        <div className="modal-box p-[12px] text-[var(--primary-black)] rounded-[14px] bg-[var(--background)] font-primary font-medium">
+          <p className="text-[18px] mb-[16px]">Compare Translation</p>
+
+          {compareData && selectedCompareTranslationShort && compareData[selectedCompareTranslationShort]?.text && (
+            <>
+              <p className="mb-[8px]">{selectedTranslation}</p>
+              <div
+                className="w-full text-[14px] box-border shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-none bg-[var(--foreground)] border border-[#F1ECE5] rounded-[12px] px-[16px] py-[10px] text-sm font-primary text-[var(--primary-gray)] whitespace-pre-wrap"
+              >
+                {compareData[selectedTranslationShort.toUpperCase()].text}
+              </div>
+
+              <p className="mb-[8px] mt-[12px]">{selectedCompareTranslation}</p>
+              <div
+                className="w-full text-[14px] box-border shadow-[0_0_14px_0_rgba(108,103,97,0.06)] outline-none bg-[var(--foreground)] border border-[#F1ECE5] rounded-[12px] px-[16px] py-[10px] text-sm font-primary text-[var(--primary-gray)] whitespace-pre-wrap"
+              >
+                {compareData[selectedCompareTranslationShort.toUpperCase()].text}
+              </div>
+            </>
+          )}
+
+          <div className="mt-[16px] flex justify-end">
+            <form method="dialog">
+              <button className="px-[12px] py-[6px] rounded-[12px] border border-[var(--border)] shadow-sm font-primary shadow-[0_0_14px_0_rgba(108,103,97,0.06)] bg-[var(--foreground)] text-[var(--primary-black)] hover:bg-[#f0ece6] transition-all duration-200">
+                Close
+              </button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop opacity-0">
+          <button onClick={() => {
+            setCompareTranslation(false);
+            setSelectedCompareTranslation(null);
+            setSelectedCompareTranslationShort(null);
+          }}>close</button>
+        </form>
+      </dialog>
     </main>
   );
 }
