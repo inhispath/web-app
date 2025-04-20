@@ -1689,11 +1689,13 @@ function HomeContent() {
   // Function to check if a verse has a note
   const hasNoteForVerse = (bookId: number, chapter: number, verse: number): boolean => {
     return notes.some(note => 
-      note.bookId === bookId && 
-      note.chapter === chapter && 
-      note.verse === verse
+      note.bookId === bookId &&
+      note.chapter === chapter &&
+      note.verse === verse &&
+      note.userNote
     );
   };
+  
 
   // Add useEffect to open the correct testament dropdown when a book is selected
   useEffect(() => {
