@@ -159,7 +159,7 @@ export default function PrayersPage() {
                           onClick={() => focusOnPrayer(prayer.id)}
                           className="px-[12px] py-[6px] rounded-[6px] border border-[var(--border)] shadow-sm font-primary shadow-[0_0_14px_0_rgba(108,103,97,0.06)] bg-[#684242] text-white hover:opacity-90 transition-all duration-200"
                         >
-                          Remove distractions
+                          Read
                         </button>
                       </div>
                     )}
