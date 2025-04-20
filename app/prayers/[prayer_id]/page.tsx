@@ -12,7 +12,7 @@ export const revalidate = 0;
 export async function generateMetadata({
   params
 }: {
-  params: { prayer_id: string }
+  params: any
 }): Promise<Metadata> {
   // Access headers to ensure dynamic rendering
   headers();
@@ -84,7 +84,7 @@ export async function generateMetadata({
 export default async function PrayerPage({
   params
 }: {
-  params: { prayer_id: string }
+  params: any
 }) {
   // Await params before accessing properties
   const resolvedParams = await Promise.resolve(params);
