@@ -164,7 +164,7 @@ export default function Home() {
 
         <div id="section_two" className="w-1/2 flex flex-col justify-center items-start px-[50px]">
           <h2 className="text-[2em] font-[400] text-[#111418]">Read and Learn from the Bible</h2>
-          <p className="text-[#637588] text-sm mt-[12px] w-[80%]">
+          <p id="descc" className="text-[#637588] text-sm mt-[12px] w-[80%]">
             Our website's reading section was built with the idea of learning from the Bible and incorporating these ideas into your life.
             We've taken advice and ideas from the community and built them making it the suitable for your needs. Some features:
           </p>

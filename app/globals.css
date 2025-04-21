@@ -194,6 +194,9 @@ pre, code {
   #second_div {
     width: 0px;
   }
+  #descc {
+    width: 100%;
+  }
 }
 
 @media (max-width: 500px) {
