@@ -79,7 +79,7 @@ export default function PrayersPage() {
   return (
     <main className="min-h-screen h-full bg-[var(--background)] text-black overflow-x-hidden">
       <header className="relative w-full h-[60px] bg-[var(--foreground)] text-[var(--primary-black)] flex items-center border-b-[1px] border-[var(--border)] px-6">
-        <Link href="/" className="absolute ml-[16px] flex items-center gap-[6px] text-sm text-[#684242] hover:opacity-80 font-primary transition-opacity no-underline">
+        <Link href="/read" className="absolute ml-[16px] flex items-center gap-[6px] text-sm text-[#684242] hover:opacity-80 font-primary transition-opacity no-underline">
           <ArrowLeft size={18} />
           <span className="font-primary text-[16px]">Back</span>
         </Link>

@@ -1,32 +1,18 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
 import { ThemeProvider } from "../components/theme/ThemeProvider";
 import { FontProvider } from "../components/fonts/FontProvider";
-import { 
-  inter, 
-  roboto, 
-  lora, 
-  montserrat, 
-  jetbrainsMono,
-  albertSans,
-  lato
-} from "../lib/fonts";
 import MobileBlocker from "./components/MobileBlocker";
+import LayoutWrapper from "./components/LayoutWrapper"; // use new wrapper
+import { inter, roboto, lora, montserrat, jetbrainsMono, albertSans, lato } from "../lib/fonts";
 
 export const metadata: Metadata = {
   title: "In His Path",
   description: "Be among the first to join our community, and help shape the future of In His Path.",
   icons: {
     icon: [
-      {
-        url: '/dark.ico',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/light.ico',
-        media: '(prefers-color-scheme: dark)',
-      },
+      { url: '/dark.ico', media: '(prefers-color-scheme: light)' },
+      { url: '/light.ico', media: '(prefers-color-scheme: dark)' },
     ],
   },
   openGraph: {
@@ -53,11 +39,7 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`
@@ -72,11 +54,13 @@ export default function RootLayout({
         <ThemeProvider>
           <FontProvider>
             <MobileBlocker>
-              {children}
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
             </MobileBlocker>
           </FontProvider>
         </ThemeProvider>
       </body>
     </html>
   );
-} 
+}

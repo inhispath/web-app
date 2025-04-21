@@ -123,7 +123,7 @@ export default async function VersePage({
     verse,
   });
   
-  const redirectUrl = `/?${query.toString()}`;
+  const redirectUrl = `/read?${query.toString()}`;
   
   // Fetch verse content for display
   let verseText = "Loading verse...";

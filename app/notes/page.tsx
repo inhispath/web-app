@@ -270,7 +270,7 @@ export default function NotesPage() {
   return (
     <main className="min-h-screen h-full bg-[var(--background)] text-black overflow-x-hidden">
       <header className="relative w-full h-[60px] bg-[var(--foreground)] text-[var(--primary-black)] flex items-center border-b-[1px] border-[var(--border)] px-6">
-        <Link href="/" className="absolute ml-[16px] flex items-center gap-[6px] text-sm text-[#684242] hover:opacity-80 font-primary transition-opacity no-underline">
+        <Link href="/read" className="absolute ml-[16px] flex items-center gap-[6px] text-sm text-[#684242] hover:opacity-80 font-primary transition-opacity no-underline">
           <ArrowLeft size={18} />
           <span className="font-primary text-[16px]">Back to Reading</span>
         </Link>
@@ -424,7 +424,7 @@ export default function NotesPage() {
                 <div className="flex justify-end mt-4 gap-2">
                   {categoryToEdit && (
                     <button
-                      className="px-[12px] py-[6px] rounded-[12px] text-sm bg-transparent text-red-500 hover:text-white hover:bg-red-500 border border-red-300 font-primary transition-all duration-200"
+                      className="px-[12px] py-[6px] rounded-[12px] text-sm bg-transparent  hover:text-white hover:bg-red-500 border border-red-300 font-primary transition-all duration-200"
                       onClick={() => {
                         // Remove confirm dialog and just proceed with deletion
                         handleDeleteCategory(categoryToEdit);

@@ -37,7 +37,7 @@ export default function MobileBlocker({ children }: { children: React.ReactNode 
 
   // console.log(pathname);
 
-  if (isMobile && pathname == "/") {
+  if (isMobile && pathname == "/read") {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-screen p-6 bg-[var(--background)] text-[var(--primary-black)]">
         <div className="bg-[var(--foreground)] p-8 rounded-[12px] shadow-[0_0_14px_0_rgba(108,103,97,0.06)] max-w-md text-center">

@@ -129,7 +129,6 @@
   border-radius: 50%;
 }
 
-/* Font application */
 body {
   font-family: var(--font-secondary), system-ui, sans-serif;
 }
@@ -166,3 +165,46 @@ pre, code {
     font-family: var(--font-mono), monospace !important;
   }
 } 
+
+
+
+
+@media (max-width: 1600px) {
+  #embrace_title {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 1360px) {
+  #desc_title {
+    width: 100%;
+  }
+}
+
+@media (max-width: 730px) {
+  #first_div {
+    width: 100%;
+  }
+  #second_div {
+    width: 0px;
+  }
+}
+
+@media (max-width: 860px) {
+  #section_features {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  #section_one {
+    width: 80%;
+  }
+  #section_two {
+    width: 80%;
+    margin-top: 24px;
+  }
+}
