@@ -184,11 +184,29 @@ pre, code {
 @media (max-width: 730px) {
   #first_div {
     width: 100%;
+    text-align: center;
+    padding-left: 12px;
+    padding-right: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
   #second_div {
     width: 0px;
   }
 }
+
+@media (max-width: 500px) {
+  #embrace_title {
+    font-size: 2rem;
+  }
+  #buttons_div {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
 
 @media (max-width: 860px) {
   #section_features {

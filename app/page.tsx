@@ -48,7 +48,7 @@ export default function Home() {
               Discover a journey grounded in purpose, faith, and community. Join us and start walking in his path today.
             </p>
 
-            <div className="flex flex-row gap-[16px] mt-[32px]">
+            <div id="buttons_div" className="flex flex-row gap-[16px] mt-[32px]">
               <button
                 className="px-[24px] py-[12px] text-[15px] rounded-full border-none bg-[#684242] hover:bg-[var(--border)] font-primary w-fit transition-all duration-200"
                 onClick={() => (window.location.href = "/read")}
@@ -60,7 +60,7 @@ export default function Home() {
                 className="px-[24px] py-[12px] text-[15px] text-[#684242] rounded-full border border-[2px] border-[#684242] bg-transparent hover:bg-[var(--border)] font-primary w-fit transition-all duration-200"
                 onClick={() => window.open("https://discord.gg/inhispath", "_blank")}
               >
-                Join Community
+                Join Discord
               </button>
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function Home() {
               className="px-[24px] py-[12px] text-[15px] text-[var(--foreground)] rounded-full border border-[2px] border-[var(--foreground)] bg-transparent hover:bg-[var(--border)] font-primary w-fit transition-all duration-200"
               onClick={() => window.open("https://discord.gg/inhispath", "_blank")}
             >
-              Join Community
+              Join Discord
             </button>
           </div>
         </div>
